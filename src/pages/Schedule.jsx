@@ -1,28 +1,82 @@
 import { useState, useMemo } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Search, Users } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
+import { contacts } from '../data/contacts'
 
-const ROWS = 12
+const ftssContacts = contacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+const defaultLabels = [
+  '6 AM', '7 AM', '8 AM', '9 AM', '10 AM', '11 AM', '12 PM',
+  '1 PM', '2 PM', '3 PM', '4 PM', '5 PM', '6 PM', '7 PM',
+]
 
 export default function Schedule() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
-  const [cells, setCells] = useState({})
+  const [entries, setEntries] = useState([])
+  const [modalCell, setModalCell] = useState(null)
+  const [search, setSearch] = useState('')
+  const [selectedContact, setSelectedContact] = useState(null)
+  const [note, setNote] = useState('')
+  const [showAllContacts, setShowAllContacts] = useState(false)
+  const [rowLabels, setRowLabels] = useState(defaultLabels)
 
   const weekDates = useMemo(() =>
     DAYS.map((_, i) => addDays(weekStart, i)),
     [weekStart]
   )
 
-  const getCellKey = (row, dayIdx) => {
+  const filteredContacts = useMemo(() => {
+    const pool = showAllContacts ? contacts : ftssContacts
+    if (!search.trim()) return pool.slice(0, 30)
+    const q = search.toLowerCase()
+    return pool.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.phones.some(p => p.number.includes(q))
+    ).slice(0, 30)
+  }, [search, showAllContacts])
+
+  const getEntries = (dayIdx, rowIdx) => {
     const dateStr = format(weekDates[dayIdx], 'yyyy-MM-dd')
-    return `${dateStr}-${row}`
+    return entries.filter(e => e.date === dateStr && e.row === rowIdx)
   }
 
-  const handleChange = (row, dayIdx, value) => {
-    const key = getCellKey(row, dayIdx)
-    setCells(prev => ({ ...prev, [key]: value }))
+  const handleCellClick = (dayIdx, rowIdx) => {
+    setModalCell({ dayIdx, rowIdx })
+    setSearch('')
+    setSelectedContact(null)
+    setNote('')
+    setShowAllContacts(false)
   }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!selectedContact) return
+
+    const dateStr = format(weekDates[modalCell.dayIdx], 'yyyy-MM-dd')
+    setEntries(prev => [...prev, {
+      id: `e${Date.now()}`,
+      date: dateStr,
+      row: modalCell.rowIdx,
+      contactId: selectedContact.id,
+      contactName: selectedContact.name,
+      phone: selectedContact.phones[0]?.number || '',
+      note,
+    }])
+    setModalCell(null)
+  }
+
+  const handleDelete = (entryId) => {
+    setEntries(prev => prev.filter(e => e.id !== entryId))
+  }
+
+  const getInitials = (name) => {
+    const parts = name.replace(/^FTSS\s*/i, '').split(' ')
+    if (parts.length >= 2) return `${(parts[0][0] || '').toUpperCase()}${(parts[1][0] || '').toUpperCase()}`
+    return (parts[0] || '').substring(0, 2).toUpperCase()
+  }
+
+  const avatarColors = ['avatar-blue', 'avatar-green', 'avatar-orange', 'avatar-purple', 'avatar-red']
 
   return (
     <>
@@ -30,7 +84,7 @@ export default function Schedule() {
         <div className="page-header-row">
           <div>
             <h2>Weekly Schedule</h2>
-            <p>Click any cell to type directly into it</p>
+            <p>Click a time slot to assign an FTSS contact</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button className="btn btn-ghost" onClick={() => setWeekStart(d => subWeeks(d, 1))}>
@@ -51,7 +105,7 @@ export default function Schedule() {
       <div className="page-body" style={{ overflowX: 'auto', padding: '20px 16px' }}>
         <div style={{ minWidth: '900px' }}>
           {/* Header row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '70px repeat(7, 1fr)', gap: '1px', marginBottom: '1px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '120px repeat(7, 1fr)', gap: '1px', marginBottom: '1px' }}>
             <div style={{ padding: '10px 8px' }} />
             {DAYS.map((day, i) => {
               const d = weekDates[i]
@@ -75,36 +129,71 @@ export default function Schedule() {
             })}
           </div>
 
-          {/* Editable rows */}
-          {Array.from({ length: ROWS }, (_, rowIdx) => (
-            <div key={rowIdx} style={{ display: 'grid', gridTemplateColumns: '70px repeat(7, 1fr)', gap: '1px', marginBottom: '1px' }}>
+          {/* Time rows */}
+          {defaultLabels.map((_, rowIdx) => (
+            <div key={rowIdx} style={{ display: 'grid', gridTemplateColumns: '120px repeat(7, 1fr)', gap: '1px', marginBottom: '1px' }}>
               <div style={{
-                padding: '8px', fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)',
-                display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-                paddingRight: '12px', background: 'var(--bg-tertiary)',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border)',
+                display: 'flex', alignItems: 'center',
               }}>
-                Row {rowIdx + 1}
+                <input
+                  type="text"
+                  value={rowLabels[rowIdx]}
+                  onChange={e => setRowLabels(prev => { const next = [...prev]; next[rowIdx] = e.target.value; return next; })}
+                  style={{
+                    width: '100%', background: 'transparent', border: 'none', outline: 'none',
+                    padding: '8px 10px', fontSize: '13px', fontWeight: 500,
+                    color: 'var(--text-primary)', fontFamily: 'inherit', textAlign: 'center',
+                  }}
+                />
               </div>
               {DAYS.map((_, dayIdx) => {
-                const key = getCellKey(rowIdx, dayIdx)
+                const cellEntries = getEntries(dayIdx, rowIdx)
                 const isToday = format(weekDates[dayIdx], 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
                 return (
-                  <div key={dayIdx} style={{
-                    background: isToday ? 'rgba(59, 130, 246, 0.04)' : 'var(--bg-secondary)',
-                    border: '1px solid var(--border)',
-                  }}>
-                    <textarea
-                      value={cells[key] || ''}
-                      onChange={e => handleChange(rowIdx, dayIdx, e.target.value)}
-                      placeholder=""
-                      style={{
-                        width: '100%', height: '100%', minHeight: '44px',
-                        padding: '8px 10px', background: 'transparent',
-                        border: 'none', outline: 'none', resize: 'vertical',
-                        fontSize: '13px', fontFamily: 'inherit',
-                        color: 'var(--text-primary)', lineHeight: '1.4',
-                      }}
-                    />
+                  <div
+                    key={dayIdx}
+                    onClick={() => handleCellClick(dayIdx, rowIdx)}
+                    style={{
+                      minHeight: '44px', padding: '4px 6px',
+                      background: isToday ? 'rgba(59, 130, 246, 0.04)' : 'var(--bg-secondary)',
+                      border: '1px solid var(--border)', cursor: 'pointer',
+                      transition: 'background 0.1s', position: 'relative',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                    onMouseLeave={e => e.currentTarget.style.background = isToday ? 'rgba(59, 130, 246, 0.04)' : 'var(--bg-secondary)'}
+                  >
+                    {cellEntries.length === 0 && (
+                      <div style={{
+                        position: 'absolute', inset: 0, display: 'flex',
+                        alignItems: 'center', justifyContent: 'center',
+                        opacity: 0, transition: 'opacity 0.15s',
+                      }} className="slot-hover-plus">
+                        <Plus size={16} style={{ color: 'var(--text-muted)' }} />
+                      </div>
+                    )}
+                    {cellEntries.map(entry => (
+                      <div key={entry.id} style={{
+                        background: 'var(--accent-light)', border: '1px solid rgba(59, 130, 246, 0.3)',
+                        borderRadius: '4px', padding: '4px 6px', marginBottom: '2px',
+                        fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px',
+                      }} onClick={e => e.stopPropagation()}>
+                        <div className={`avatar ${avatarColors[entry.contactName.charCodeAt(4) % avatarColors.length]}`} style={{ width: '18px', height: '18px', fontSize: '7px', flexShrink: 0 }}>
+                          {getInitials(entry.contactName)}
+                        </div>
+                        <span style={{ color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                          {entry.contactName.replace(/^FTSS\s*/i, '')}
+                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
+                          style={{
+                            background: 'none', border: 'none', color: 'var(--text-muted)',
+                            cursor: 'pointer', padding: '0 2px', fontSize: '12px', lineHeight: 1, flexShrink: 0,
+                          }}
+                        >&times;</button>
+                      </div>
+                    ))}
                   </div>
                 )
               })}
@@ -112,6 +201,124 @@ export default function Schedule() {
           ))}
         </div>
       </div>
+
+      {/* Assignment Modal */}
+      {modalCell && (
+        <div className="modal-overlay" onClick={() => setModalCell(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <h3>
+                Assign — {DAYS[modalCell.dayIdx]}, {format(weekDates[modalCell.dayIdx], 'MMM d')} at {rowLabels[modalCell.rowIdx]}
+              </h3>
+              <button className="modal-close" onClick={() => setModalCell(null)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="modal-body">
+                {!selectedContact ? (
+                  <>
+                    <div className="form-group">
+                      <label>Search Contacts</label>
+                      <div style={{ position: 'relative' }}>
+                        <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                        <input
+                          type="text"
+                          placeholder="Search by name or phone..."
+                          value={search}
+                          onChange={e => setSearch(e.target.value)}
+                          autoFocus
+                          style={{ paddingLeft: '34px' }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${!showAllContacts ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => { setShowAllContacts(false); setSearch(''); }}
+                        style={{ fontSize: '12px' }}
+                      >
+                        <Users size={13} /> FTSS ({ftssContacts.length})
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${showAllContacts ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => { setShowAllContacts(true); setSearch(''); }}
+                        style={{ fontSize: '12px' }}
+                      >
+                        All Contacts
+                      </button>
+                    </div>
+                    <div style={{ maxHeight: '260px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+                      {filteredContacts.map(c => (
+                        <div
+                          key={c.id}
+                          onClick={() => { setSelectedContact(c); setSearch(''); }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '10px',
+                            padding: '10px 12px', cursor: 'pointer',
+                            borderBottom: '1px solid var(--border)', transition: 'background 0.1s',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <div className={`avatar ${avatarColors[c.name.charCodeAt(4) % avatarColors.length]}`} style={{ width: '30px', height: '30px', fontSize: '10px' }}>
+                            {getInitials(c.name)}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                              {showAllContacts ? c.name : c.name.replace(/^FTSS\s*/i, '')}
+                            </div>
+                            {c.phones[0] && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{c.phones[0].number}</div>}
+                          </div>
+                        </div>
+                      ))}
+                      {filteredContacts.length === 0 && (
+                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>No contacts found</div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '12px',
+                      padding: '12px', background: 'var(--bg-tertiary)',
+                      borderRadius: 'var(--radius-sm)', marginBottom: '16px',
+                    }}>
+                      <div className={`avatar ${avatarColors[selectedContact.name.charCodeAt(4) % avatarColors.length]}`} style={{ width: '36px', height: '36px', fontSize: '12px' }}>
+                        {getInitials(selectedContact.name)}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {showAllContacts ? selectedContact.name : selectedContact.name.replace(/^FTSS\s*/i, '')}
+                        </div>
+                        {selectedContact.phones[0] && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{selectedContact.phones[0].number}</div>}
+                      </div>
+                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setSelectedContact(null)}>Change</button>
+                    </div>
+                    <div className="form-group">
+                      <label>Note (optional)</label>
+                      <textarea
+                        placeholder="Add a note..."
+                        value={note}
+                        onChange={e => setNote(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+              {selectedContact && (
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-ghost" onClick={() => setModalCell(null)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary">Assign</button>
+                </div>
+              )}
+            </form>
+          </div>
+        </div>
+      )}
+
+      <style>{`.slot-hover-plus { } div:hover > .slot-hover-plus { opacity: 1 !important; }`}</style>
     </>
   )
 }
