@@ -1,0 +1,311 @@
+import { useState, useMemo } from 'react'
+import { Plus, X, ChevronLeft, ChevronRight, Search, Users } from 'lucide-react'
+import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
+import { contacts } from '../data/contacts'
+
+const ftssContacts = contacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 6)
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+export default function Schedule() {
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const [entries, setEntries] = useState([])
+  const [modalCell, setModalCell] = useState(null)
+  const [search, setSearch] = useState('')
+  const [selectedContact, setSelectedContact] = useState(null)
+  const [note, setNote] = useState('')
+  const [showAllContacts, setShowAllContacts] = useState(false)
+
+  const weekDates = useMemo(() =>
+    DAYS.map((_, i) => addDays(weekStart, i)),
+    [weekStart]
+  )
+
+  const filteredContacts = useMemo(() => {
+    const pool = showAllContacts ? contacts : ftssContacts
+    if (!search.trim()) return pool.slice(0, 30)
+    const q = search.toLowerCase()
+    return pool.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.phones.some(p => p.number.includes(q))
+    ).slice(0, 30)
+  }, [search, showAllContacts])
+
+  const getEntries = (dayIdx, hour) => {
+    const dateStr = format(weekDates[dayIdx], 'yyyy-MM-dd')
+    return entries.filter(e => e.date === dateStr && e.hour === hour)
+  }
+
+  const handleCellClick = (dayIdx, hour) => {
+    setModalCell({ dayIdx, hour })
+    setSearch('')
+    setSelectedContact(null)
+    setNote('')
+    setShowAllContacts(false)
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!selectedContact) return
+
+    const dateStr = format(weekDates[modalCell.dayIdx], 'yyyy-MM-dd')
+    setEntries(prev => [...prev, {
+      id: `e${Date.now()}`,
+      date: dateStr,
+      hour: modalCell.hour,
+      contactId: selectedContact.id,
+      contactName: selectedContact.name,
+      phone: selectedContact.phones[0]?.number || '',
+      note,
+    }])
+    setModalCell(null)
+  }
+
+  const handleDelete = (entryId) => {
+    setEntries(prev => prev.filter(e => e.id !== entryId))
+  }
+
+  const getInitials = (name) => {
+    const parts = name.replace(/^FTSS\s*/i, '').split(' ')
+    if (parts.length >= 2) return `${(parts[0][0] || '').toUpperCase()}${(parts[1][0] || '').toUpperCase()}`
+    return (parts[0] || '').substring(0, 2).toUpperCase()
+  }
+
+  const avatarColors = ['avatar-blue', 'avatar-green', 'avatar-orange', 'avatar-purple', 'avatar-red']
+
+  return (
+    <>
+      <div className="page-header">
+        <div className="page-header-row">
+          <div>
+            <h2>Weekly Schedule</h2>
+            <p>Click a time slot to assign an FTSS contact</p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button className="btn btn-ghost" onClick={() => setWeekStart(d => subWeeks(d, 1))}>
+              <ChevronLeft size={16} />
+            </button>
+            <span style={{ fontSize: '14px', fontWeight: 600, minWidth: '200px', textAlign: 'center' }}>
+              {format(weekStart, 'MMM d')} — {format(addDays(weekStart, 6), 'MMM d, yyyy')}
+            </span>
+            <button className="btn btn-ghost" onClick={() => setWeekStart(d => addWeeks(d, 1))}>
+              <ChevronRight size={16} />
+            </button>
+            <button className="btn btn-ghost" style={{ marginLeft: '8px' }} onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
+              Today
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="page-body" style={{ overflowX: 'auto', padding: '20px 16px' }}>
+        <div style={{ minWidth: '900px' }}>
+          {/* Header row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '70px repeat(7, 1fr)', gap: '1px', marginBottom: '1px' }}>
+            <div style={{ padding: '10px 8px' }} />
+            {DAYS.map((day, i) => {
+              const d = weekDates[i]
+              const isToday = format(d, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+              return (
+                <div key={day} style={{
+                  padding: '10px 12px', textAlign: 'center',
+                  background: 'var(--bg-tertiary)',
+                  borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0',
+                  border: isToday ? '1px solid var(--accent)' : '1px solid transparent',
+                  borderBottom: 'none',
+                }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: isToday ? 'var(--accent)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {day.substring(0, 3)}
+                  </div>
+                  <div style={{ fontSize: '18px', fontWeight: 700, color: isToday ? 'var(--accent)' : 'var(--text-primary)' }}>
+                    {format(d, 'd')}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Time rows */}
+          {HOURS.map(hour => (
+            <div key={hour} style={{ display: 'grid', gridTemplateColumns: '70px repeat(7, 1fr)', gap: '1px', marginBottom: '1px' }}>
+              <div style={{
+                padding: '8px', fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)',
+                display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
+                paddingRight: '12px', background: 'var(--bg-tertiary)',
+              }}>
+                {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
+              </div>
+              {DAYS.map((_, dayIdx) => {
+                const cellEntries = getEntries(dayIdx, hour)
+                const isToday = format(weekDates[dayIdx], 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+                return (
+                  <div
+                    key={dayIdx}
+                    onClick={() => handleCellClick(dayIdx, hour)}
+                    style={{
+                      minHeight: '52px', padding: '4px 6px',
+                      background: isToday ? 'rgba(59, 130, 246, 0.04)' : 'var(--bg-secondary)',
+                      border: '1px solid var(--border)', cursor: 'pointer',
+                      transition: 'background 0.1s', position: 'relative',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                    onMouseLeave={e => e.currentTarget.style.background = isToday ? 'rgba(59, 130, 246, 0.04)' : 'var(--bg-secondary)'}
+                  >
+                    {cellEntries.length === 0 && (
+                      <div style={{
+                        position: 'absolute', inset: 0, display: 'flex',
+                        alignItems: 'center', justifyContent: 'center',
+                        opacity: 0, transition: 'opacity 0.15s',
+                      }} className="slot-hover-plus">
+                        <Plus size={16} style={{ color: 'var(--text-muted)' }} />
+                      </div>
+                    )}
+                    {cellEntries.map(entry => (
+                      <div key={entry.id} style={{
+                        background: 'var(--accent-light)', border: '1px solid rgba(59, 130, 246, 0.3)',
+                        borderRadius: '4px', padding: '4px 6px', marginBottom: '2px',
+                        fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px',
+                      }} onClick={e => e.stopPropagation()}>
+                        <div className={`avatar ${avatarColors[entry.contactName.charCodeAt(4) % avatarColors.length]}`} style={{ width: '18px', height: '18px', fontSize: '7px', flexShrink: 0 }}>
+                          {getInitials(entry.contactName)}
+                        </div>
+                        <span style={{ color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                          {entry.contactName.replace(/^FTSS\s*/i, '')}
+                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
+                          style={{
+                            background: 'none', border: 'none', color: 'var(--text-muted)',
+                            cursor: 'pointer', padding: '0 2px', fontSize: '12px', lineHeight: 1, flexShrink: 0,
+                          }}
+                        >&times;</button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Assignment Modal */}
+      {modalCell && (
+        <div className="modal-overlay" onClick={() => setModalCell(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <h3>
+                Assign — {DAYS[modalCell.dayIdx]}, {format(weekDates[modalCell.dayIdx], 'MMM d')} at{' '}
+                {modalCell.hour === 0 ? '12 AM' : modalCell.hour < 12 ? `${modalCell.hour} AM` : modalCell.hour === 12 ? '12 PM' : `${modalCell.hour - 12} PM`}
+              </h3>
+              <button className="modal-close" onClick={() => setModalCell(null)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="modal-body">
+                {!selectedContact ? (
+                  <>
+                    <div className="form-group">
+                      <label>Search Contacts</label>
+                      <div style={{ position: 'relative' }}>
+                        <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                        <input
+                          type="text"
+                          placeholder="Search by name or phone..."
+                          value={search}
+                          onChange={e => setSearch(e.target.value)}
+                          autoFocus
+                          style={{ paddingLeft: '34px' }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${!showAllContacts ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => { setShowAllContacts(false); setSearch(''); }}
+                        style={{ fontSize: '12px' }}
+                      >
+                        <Users size={13} /> FTSS ({ftssContacts.length})
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${showAllContacts ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => { setShowAllContacts(true); setSearch(''); }}
+                        style={{ fontSize: '12px' }}
+                      >
+                        All Contacts
+                      </button>
+                    </div>
+                    <div style={{ maxHeight: '260px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+                      {filteredContacts.map(c => (
+                        <div
+                          key={c.id}
+                          onClick={() => { setSelectedContact(c); setSearch(''); }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '10px',
+                            padding: '10px 12px', cursor: 'pointer',
+                            borderBottom: '1px solid var(--border)', transition: 'background 0.1s',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <div className={`avatar ${avatarColors[c.name.charCodeAt(4) % avatarColors.length]}`} style={{ width: '30px', height: '30px', fontSize: '10px' }}>
+                            {getInitials(c.name)}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                              {showAllContacts ? c.name : c.name.replace(/^FTSS\s*/i, '')}
+                            </div>
+                            {c.phones[0] && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{c.phones[0].number}</div>}
+                          </div>
+                        </div>
+                      ))}
+                      {filteredContacts.length === 0 && (
+                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>No contacts found</div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '12px',
+                      padding: '12px', background: 'var(--bg-tertiary)',
+                      borderRadius: 'var(--radius-sm)', marginBottom: '16px',
+                    }}>
+                      <div className={`avatar ${avatarColors[selectedContact.name.charCodeAt(4) % avatarColors.length]}`} style={{ width: '36px', height: '36px', fontSize: '12px' }}>
+                        {getInitials(selectedContact.name)}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {showAllContacts ? selectedContact.name : selectedContact.name.replace(/^FTSS\s*/i, '')}
+                        </div>
+                        {selectedContact.phones[0] && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{selectedContact.phones[0].number}</div>}
+                      </div>
+                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setSelectedContact(null)}>Change</button>
+                    </div>
+                    <div className="form-group">
+                      <label>Note (optional)</label>
+                      <textarea
+                        placeholder="Add a note..."
+                        value={note}
+                        onChange={e => setNote(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+              {selectedContact && (
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-ghost" onClick={() => setModalCell(null)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary">Assign</button>
+                </div>
+              )}
+            </form>
+          </div>
+        </div>
+      )}
+
+      <style>{`.slot-hover-plus { } div:hover > .slot-hover-plus { opacity: 1 !important; }`}</style>
+    </>
+  )
+}

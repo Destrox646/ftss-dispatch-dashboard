@@ -1,0 +1,198 @@
+import { useState, useMemo } from 'react'
+import { Pencil, X, Check, Calendar, Users, MessageSquare, Clock, ChevronRight } from 'lucide-react'
+import { format, startOfWeek, addDays, isToday } from 'date-fns'
+import { contacts } from '../data/contacts'
+
+const ftssContacts = contacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
+
+const QUICK_LINKS = [
+  { label: 'View Schedule', path: '/schedule', icon: Calendar, color: 'var(--accent)' },
+  { label: 'FTSS Group Chat', path: '/chat', icon: MessageSquare, color: '#8b5cf6' },
+  { label: 'Browse Contacts', path: '/contacts', icon: Users, color: '#10b981' },
+]
+
+export default function Dashboard({ currentUser, setCurrentUser }) {
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState({ name: currentUser.name, role: currentUser.role })
+
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+
+  const handleSave = (e) => {
+    e.preventDefault()
+    const avatar = form.name.split(' ').map(n => n[0] || '').join('').toUpperCase().substring(0, 2)
+    setCurrentUser(prev => ({ ...prev, name: form.name, role: form.role, avatar }))
+    setEditing(false)
+  }
+
+  const now = new Date()
+  const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'
+
+  return (
+    <>
+      <div className="page-header">
+        <h2>Dashboard</h2>
+      </div>
+      <div className="page-body" style={{ maxWidth: '960px' }}>
+        {/* Welcome */}
+        <div className="card" style={{ marginBottom: '20px', background: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08))' }}>
+          <div className="card-body" style={{ padding: '28px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>
+              {greeting}, {currentUser.name.split(' ')[0]}
+            </h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+              {format(now, 'EEEE, MMMM d, yyyy')} — FTSS Services LLC Dispatch Dashboard
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          {/* Dispatcher Card */}
+          <div className="card">
+            <div className="card-header">
+              <h3>Dispatcher</h3>
+              {!editing && (
+                <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ name: currentUser.name, role: currentUser.role }); setEditing(true) }}>
+                  <Pencil size={14} /> Edit
+                </button>
+              )}
+            </div>
+            <div className="card-body">
+              {!editing ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div className="avatar avatar-blue" style={{ width: '56px', height: '56px', fontSize: '18px' }}>
+                    {currentUser.avatar}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>{currentUser.name}</div>
+                    <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{currentUser.role}</div>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleSave}>
+                  <div className="form-group">
+                    <label>Name</label>
+                    <input type="text" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} autoFocus />
+                  </div>
+                  <div className="form-group">
+                    <label>Role</label>
+                    <input type="text" required value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <button type="button" className="btn btn-ghost" onClick={() => setEditing(false)}><X size={14} /> Cancel</button>
+                    <button type="submit" className="btn btn-primary"><Check size={14} /> Save</button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Links */}
+          <div className="card">
+            <div className="card-header"><h3>Quick Links</h3></div>
+            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {QUICK_LINKS.map(link => (
+                <a
+                  key={link.path}
+                  href={link.path}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    padding: '12px', borderRadius: 'var(--radius-sm)',
+                    textDecoration: 'none', transition: 'background 0.1s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{
+                    width: '36px', height: '36px', borderRadius: '8px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: `${link.color}18`,
+                  }}>
+                    <link.icon size={18} style={{ color: link.color }} />
+                  </div>
+                  <span style={{ flex: 1, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{link.label}</span>
+                  <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* This Week */}
+          <div className="card">
+            <div className="card-header">
+              <h3>This Week</h3>
+              <a href="/schedule" style={{ fontSize: '13px', color: 'var(--accent)', textDecoration: 'none' }}>View schedule &rarr;</a>
+            </div>
+            <div className="card-body">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+                {weekDays.map(day => {
+                  const today = isToday(day)
+                  return (
+                    <div key={day.toISOString()} style={{
+                      textAlign: 'center', padding: '10px 4px',
+                      borderRadius: 'var(--radius-sm)',
+                      background: today ? 'var(--accent)' : 'var(--bg-tertiary)',
+                      border: today ? 'none' : '1px solid var(--border)',
+                    }}>
+                      <div style={{
+                        fontSize: '10px', fontWeight: 600, textTransform: 'uppercase',
+                        color: today ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)',
+                        letterSpacing: '0.05em',
+                      }}>{format(day, 'EEE')}</div>
+                      <div style={{
+                        fontSize: '20px', fontWeight: 700, marginTop: '2px',
+                        color: today ? 'white' : 'var(--text-primary)',
+                      }}>{format(day, 'd')}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* FTSS Contacts Summary */}
+          <div className="card">
+            <div className="card-header">
+              <h3>FTSS Team</h3>
+              <a href="/contacts" style={{ fontSize: '13px', color: 'var(--accent)', textDecoration: 'none' }}>All contacts &rarr;</a>
+            </div>
+            <div className="card-body">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                <div style={{
+                  width: '48px', height: '48px', borderRadius: '12px',
+                  background: 'rgba(59,130,246,0.12)', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Users size={24} style={{ color: 'var(--accent)' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)' }}>{ftssContacts.length}</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>FTSS contacts</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {ftssContacts.slice(0, 8).map(c => {
+                  const initials = (c.firstName[0] || '') + (c.lastName[0] || '')
+                  const colors = ['avatar-blue', 'avatar-green', 'avatar-orange', 'avatar-purple', 'avatar-red']
+                  return (
+                    <div key={c.id} title={c.name} className={`avatar ${colors[c.name.charCodeAt(4) % colors.length]}`} style={{
+                      width: '30px', height: '30px', fontSize: '9px', cursor: 'default',
+                    }}>{initials}</div>
+                  )
+                })}
+                {ftssContacts.length > 8 && (
+                  <div style={{
+                    width: '30px', height: '30px', borderRadius: '50%',
+                    background: 'var(--bg-tertiary)', border: '1px solid var(--border)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)',
+                  }}>+{ftssContacts.length - 8}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
