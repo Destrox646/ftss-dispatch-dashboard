@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, Hash, Users, Plus, ChevronDown, ChevronRight } from 'lucide-react'
+import { Send, Hash, Users, Plus, ChevronDown, ChevronRight, Radio, X, Check, Search, CheckCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { contacts } from '../data/contacts'
 
@@ -24,6 +24,11 @@ export default function Chat({ messages, setMessages, currentUser }) {
   const [showMembers, setShowMembers] = useState(false)
   const [channelsOpen, setChannelsOpen] = useState(true)
   const [groupsOpen, setGroupsOpen] = useState(true)
+  const [broadcastOpen, setBroadcastOpen] = useState(false)
+  const [broadcastMsg, setBroadcastMsg] = useState('')
+  const [broadcastSearch, setBroadcastSearch] = useState('')
+  const [selectedRecipients, setSelectedRecipients] = useState(new Set(ftssContacts.map(c => c.id)))
+  const [broadcastSent, setBroadcastSent] = useState(false)
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
@@ -160,9 +165,14 @@ export default function Chat({ messages, setMessages, currentUser }) {
             )}
           </div>
           {activeInfo.type === 'group' && (
-            <button onClick={() => setShowMembers(m => !m)} className="btn btn-ghost btn-sm">
-              <Users size={14} /> Members
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => { setBroadcastOpen(true); setBroadcastMsg(''); setBroadcastSent(false); setBroadcastSearch(''); setSelectedRecipients(new Set(ftssContacts.map(c => c.id))) }} className="btn btn-primary btn-sm">
+                <Radio size={14} /> Mass Text
+              </button>
+              <button onClick={() => setShowMembers(m => !m)} className="btn btn-ghost btn-sm">
+                <Users size={14} /> Members
+              </button>
+            </div>
           )}
         </div>
 
@@ -285,6 +295,130 @@ export default function Chat({ messages, setMessages, currentUser }) {
           )}
         </div>
       </div>
+
+      {/* Broadcast Modal */}
+      {broadcastOpen && (
+        <div className="modal-overlay" onClick={() => setBroadcastOpen(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '560px' }}>
+            <div className="modal-header">
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Radio size={18} style={{ color: 'var(--accent)' }} />
+                Mass Text — FTSS
+              </h3>
+              <button className="modal-close" onClick={() => setBroadcastOpen(false)}><X size={20} /></button>
+            </div>
+            {!broadcastSent ? (
+              <form onSubmit={(e) => {
+                e.preventDefault()
+                if (!broadcastMsg.trim()) return
+                const newMsg = {
+                  id: `m${Date.now()}`,
+                  senderId: currentUser.id,
+                  senderName: currentUser.name,
+                  senderAvatar: currentUser.avatar,
+                  text: broadcastMsg.trim(),
+                  timestamp: new Date(),
+                  channel: 'ftss',
+                  broadcast: true,
+                  recipientCount: selectedRecipients.size,
+                }
+                setMessages(prev => [...prev, newMsg])
+                setBroadcastSent(true)
+              }}>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label>Message</label>
+                    <textarea
+                      placeholder="Type your mass text message..."
+                      value={broadcastMsg}
+                      onChange={e => setBroadcastMsg(e.target.value)}
+                      rows={4}
+                      autoFocus
+                      style={{ resize: 'vertical' }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Recipients ({selectedRecipients.size} of {ftssContacts.length})</label>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setSelectedRecipients(new Set(ftssContacts.map(c => c.id)))}>Select All</button>
+                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setSelectedRecipients(new Set())}>Deselect All</button>
+                    </div>
+                    <div style={{ position: 'relative', marginBottom: '8px' }}>
+                      <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                      <input
+                        type="text"
+                        placeholder="Filter recipients..."
+                        value={broadcastSearch}
+                        onChange={e => setBroadcastSearch(e.target.value)}
+                        style={{ paddingLeft: '32px', fontSize: '13px', padding: '8px 12px 8px 32px', width: '100%' }}
+                      />
+                    </div>
+                    <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+                      {ftssContacts.filter(c => {
+                        if (!broadcastSearch.trim()) return true
+                        const q = broadcastSearch.toLowerCase()
+                        return c.name.toLowerCase().includes(q) || c.phones.some(p => p.number.includes(q))
+                      }).map(c => {
+                        const checked = selectedRecipients.has(c.id)
+                        const initials = (c.firstName[0] || '') + (c.lastName[0] || '')
+                        const colors = ['avatar-blue', 'avatar-green', 'avatar-orange', 'avatar-purple', 'avatar-red']
+                        return (
+                          <label key={c.id} style={{
+                            display: 'flex', alignItems: 'center', gap: '10px',
+                            padding: '8px 12px', cursor: 'pointer',
+                            borderBottom: '1px solid var(--border)',
+                            background: checked ? 'rgba(59,130,246,0.06)' : 'transparent',
+                            transition: 'background 0.1s',
+                          }}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setSelectedRecipients(prev => {
+                                  const next = new Set(prev)
+                                  if (next.has(c.id)) next.delete(c.id); else next.add(c.id)
+                                  return next
+                                })
+                              }}
+                              style={{ accentColor: 'var(--accent)' }}
+                            />
+                            <div className={`avatar ${colors[c.name.charCodeAt(4) % colors.length]}`} style={{ width: '26px', height: '26px', fontSize: '9px', flexShrink: 0 }}>
+                              {initials}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {c.name.replace(/^FTSS\s*/i, '')}
+                              </div>
+                            </div>
+                            {c.phones[0] && (
+                              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', flexShrink: 0 }}>{c.phones[0].number}</span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-ghost" onClick={() => setBroadcastOpen(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" disabled={!broadcastMsg.trim() || selectedRecipients.size === 0}>
+                    <Send size={14} /> Send to {selectedRecipients.size} contacts
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="modal-body" style={{ textAlign: 'center', padding: '40px 24px' }}>
+                <CheckCircle size={48} style={{ color: '#10b981', marginBottom: '16px' }} />
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>Mass Text Sent</h3>
+                <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '24px' }}>
+                  Message delivered to {selectedRecipients.size} FTSS contacts
+                </p>
+                <button type="button" className="btn btn-primary" onClick={() => setBroadcastOpen(false)}>Done</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
