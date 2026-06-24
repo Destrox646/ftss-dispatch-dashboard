@@ -105,7 +105,7 @@ export default function Schedule() {
       <div className="page-body" style={{ overflowX: 'auto', padding: '20px 16px' }}>
         <div style={{ minWidth: '900px' }}>
           {/* Header row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '120px repeat(7, 1fr)', gap: '1px', marginBottom: '1px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '158px repeat(7, 1fr)', gap: '1px', marginBottom: '1px' }}>
             <div style={{ padding: '10px 8px' }} />
             {DAYS.map((day, i) => {
               const d = weekDates[i]
@@ -131,7 +131,7 @@ export default function Schedule() {
 
           {/* Time rows */}
           {defaultLabels.map((_, rowIdx) => (
-            <div key={rowIdx} style={{ display: 'grid', gridTemplateColumns: '120px repeat(7, 1fr)', gap: '1px', marginBottom: '1px' }}>
+            <div key={rowIdx} style={{ display: 'grid', gridTemplateColumns: '158px repeat(7, 1fr)', gap: '1px', marginBottom: '1px' }}>
               <div style={{
                 background: 'var(--bg-tertiary)',
                 border: '1px solid var(--border)',
