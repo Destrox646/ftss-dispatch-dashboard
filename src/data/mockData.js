@@ -1,8 +1,8 @@
 export const currentUser = {
   id: 'u1',
-  name: 'Mike Johnson',
+  name: 'Charles Wagner',
   role: 'Dispatcher',
-  avatar: 'MJ',
+  avatar: 'CW',
 };
 
 export const drivers = [
