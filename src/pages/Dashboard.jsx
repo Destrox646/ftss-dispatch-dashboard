@@ -3,6 +3,7 @@ import { Calendar, Users, MessageSquare, ChevronRight } from 'lucide-react'
 import { format, startOfWeek, addDays, isToday } from 'date-fns'
 import { contacts } from '../data/contacts'
 import { useAuth } from '../contexts/AuthContext'
+import { useSettings } from '../contexts/SettingsContext'
 import { useChatMessages } from '../hooks/useFirestore'
 import { useScheduleEntries } from '../hooks/useFirestore'
 import { useTimeOffRequests } from '../hooks/useFirestore'
@@ -17,6 +18,7 @@ const QUICK_LINKS = [
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const { settings } = useSettings()
   const { data: messages } = useChatMessages()
   const { data: entries } = useScheduleEntries()
   const { data: requests } = useTimeOffRequests()
@@ -41,10 +43,10 @@ export default function Dashboard() {
         <div className="card" style={{ marginBottom: '20px', background: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08))' }}>
           <div className="card-body" style={{ padding: '28px' }}>
             <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>
-              {greeting}, {user.email.split('@')[0]}
+              {greeting}, {settings.dispatcherName}
             </h2>
             <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-              {format(now, 'EEEE, MMMM d, yyyy')} — FTSS Services LLC Dispatch Dashboard
+              {format(now, 'EEEE, MMMM d, yyyy')} — {settings.companyName} Dispatch Dashboard
             </p>
           </div>
         </div>
