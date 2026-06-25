@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, X, ChevronLeft, ChevronRight, Search, Users, Download, Upload } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
 import { contacts } from '../data/contacts'
@@ -27,6 +28,8 @@ export default function Schedule() {
   const [rowLabels, setRowLabels] = useState(savedLabels || defaultLabels)
   const [assignRole, setAssignRole] = useState('driver')
   const [hoverCell, setHoverCell] = useState(null)
+  const [tooltipPos, setTooltipPos] = useState(null)
+  const hoverTimerRef = useRef(null)
   const fileInputRef = useRef(null)
 
   // Sync labels from Firestore
@@ -293,8 +296,19 @@ export default function Schedule() {
                     background: cellBg, border: '1px solid var(--border)',
                     display: 'flex', flexDirection: 'column', position: 'relative',
                   }}
-                    onMouseEnter={() => setHoverCell({ dayIdx, rowIdx })}
-                    onMouseLeave={() => setHoverCell(null)}
+                    onMouseEnter={e => {
+                      clearTimeout(hoverTimerRef.current)
+                      const rect = e.currentTarget.getBoundingClientRect()
+                      hoverTimerRef.current = setTimeout(() => {
+                        setHoverCell({ dayIdx, rowIdx })
+                        setTooltipPos({ top: rect.top, left: rect.left + rect.width / 2 })
+                      }, 200)
+                    }}
+                    onMouseLeave={() => {
+                      clearTimeout(hoverTimerRef.current)
+                      setHoverCell(null)
+                      setTooltipPos(null)
+                    }}
                   >
                     {/* Driver half */}
                     <div
@@ -330,38 +344,6 @@ export default function Schedule() {
                       )}
                       {helperEntries.map(renderEntry)}
                     </div>
-                    {/* Hover tooltip */}
-                    {hoverCell && hoverCell.dayIdx === dayIdx && hoverCell.rowIdx === rowIdx && (driverEntries.length > 0 || helperEntries.length > 0) && (
-                      <div style={{
-                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
-                        background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '8px',
-                        padding: '8px 10px', zIndex: 50, minWidth: '140px', maxWidth: '220px',
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.4)', pointerEvents: 'none',
-                      }}>
-                        {driverEntries.length > 0 && (
-                          <div style={{ marginBottom: helperEntries.length > 0 ? '6px' : 0 }}>
-                            <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Driver</div>
-                            {driverEntries.map(e => (
-                              <div key={e.id} style={{ fontSize: '11px', color: 'var(--text-primary)', padding: '1px 0', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <div className={`avatar ${avatarColors[e.contactName.charCodeAt(4) % avatarColors.length]}`} style={{ width: '14px', height: '14px', fontSize: '5px', flexShrink: 0 }}>{getInitials(e.contactName)}</div>
-                                {e.contactName.replace(/^FTSS\s*/i, '')}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {helperEntries.length > 0 && (
-                          <div>
-                            <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Helper</div>
-                            {helperEntries.map(e => (
-                              <div key={e.id} style={{ fontSize: '11px', color: 'var(--text-primary)', padding: '1px 0', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <div className={`avatar ${avatarColors[e.contactName.charCodeAt(4) % avatarColors.length]}`} style={{ width: '14px', height: '14px', fontSize: '5px', flexShrink: 0 }}>{getInitials(e.contactName)}</div>
-                                {e.contactName.replace(/^FTSS\s*/i, '')}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 )
               })}
@@ -369,6 +351,46 @@ export default function Schedule() {
           ))}
         </div>
       </div>
+
+      {/* Hover Tooltip via Portal */}
+      {hoverCell && tooltipPos && (() => {
+        const driverEntries = getEntries(hoverCell.dayIdx, hoverCell.rowIdx, 'driver')
+        const helperEntries = getEntries(hoverCell.dayIdx, hoverCell.rowIdx, 'helper')
+        if (driverEntries.length === 0 && helperEntries.length === 0) return null
+        return createPortal(
+          <div style={{
+            position: 'fixed', top: tooltipPos.top - 6, left: tooltipPos.left,
+            transform: 'translate(-50%, -100%)',
+            background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '8px',
+            padding: '8px 10px', zIndex: 9999, minWidth: '140px', maxWidth: '220px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.4)', pointerEvents: 'none',
+          }}>
+            {driverEntries.length > 0 && (
+              <div style={{ marginBottom: helperEntries.length > 0 ? '6px' : 0 }}>
+                <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Driver</div>
+                {driverEntries.map(e => (
+                  <div key={e.id} style={{ fontSize: '11px', color: 'var(--text-primary)', padding: '1px 0', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <div className={`avatar ${avatarColors[e.contactName.charCodeAt(4) % avatarColors.length]}`} style={{ width: '14px', height: '14px', fontSize: '5px', flexShrink: 0 }}>{getInitials(e.contactName)}</div>
+                    {e.contactName.replace(/^FTSS\s*/i, '')}
+                  </div>
+                ))}
+              </div>
+            )}
+            {helperEntries.length > 0 && (
+              <div>
+                <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Helper</div>
+                {helperEntries.map(e => (
+                  <div key={e.id} style={{ fontSize: '11px', color: 'var(--text-primary)', padding: '1px 0', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <div className={`avatar ${avatarColors[e.contactName.charCodeAt(4) % avatarColors.length]}`} style={{ width: '14px', height: '14px', fontSize: '5px', flexShrink: 0 }}>{getInitials(e.contactName)}</div>
+                    {e.contactName.replace(/^FTSS\s*/i, '')}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>,
+          document.body
+        )
+      })()}
 
       {/* Assignment Modal */}
       {modalCell && (
