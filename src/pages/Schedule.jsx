@@ -159,7 +159,6 @@ export default function Schedule() {
             // Try exact match first, then partial
             let contact = ftssContacts.find(c => c.name.toLowerCase() === ('ftss ' + lower))
             if (!contact) contact = ftssContacts.find(c => c.name.toLowerCase().includes(lower))
-            if (!contact) contact = contacts.find(c => c.name.toLowerCase().includes(lower))
             if (!contact) continue
             const dateStr = format(weekDates[dayIdx], 'yyyy-MM-dd')
             addScheduleEntry({
