@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Plus, X, ChevronLeft, ChevronRight, Search, Users } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
 import { contacts } from '../data/contacts'
@@ -13,13 +13,20 @@ const defaultLabels = [
 
 export default function Schedule() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
-  const [entries, setEntries] = useState([])
+  const [entries, setEntries] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('schedule-entries')) || [] } catch { return [] }
+  })
   const [modalCell, setModalCell] = useState(null)
   const [search, setSearch] = useState('')
   const [selectedContact, setSelectedContact] = useState(null)
   const [note, setNote] = useState('')
   const [showAllContacts, setShowAllContacts] = useState(false)
-  const [rowLabels, setRowLabels] = useState(defaultLabels)
+  const [rowLabels, setRowLabels] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('schedule-labels')) || defaultLabels } catch { return defaultLabels }
+  })
+
+  useEffect(() => { localStorage.setItem('schedule-entries', JSON.stringify(entries)) }, [entries])
+  useEffect(() => { localStorage.setItem('schedule-labels', JSON.stringify(rowLabels)) }, [rowLabels])
 
   const weekDates = useMemo(() =>
     DAYS.map((_, i) => addDays(weekStart, i)),
