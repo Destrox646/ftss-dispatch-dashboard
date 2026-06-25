@@ -4,7 +4,14 @@ const twilio = require("twilio");
 
 admin.initializeApp();
 
-exports.sendMassText = onCall(async (request) => {
+function toE164(phone) {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 10) return '+1' + digits;
+  if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
+  return '+' + digits;
+}
+
+exports.sendMassText = onCall({ auth: null }, async (request) => {
   const { message, recipients } = request.data;
 
   if (!message || !recipients || !Array.isArray(recipients) || recipients.length === 0) {
@@ -22,7 +29,7 @@ exports.sendMassText = onCall(async (request) => {
       const result = await client.messages.create({
         body: message,
         from,
-        to: recipient.phone,
+        to: toE164(recipient.phone),
       });
       results.push({ phone: recipient.phone, sid: result.sid, status: result.status });
     } catch (err) {
