@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react'
 import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
-import { MessageSquare, Calendar, ClipboardList, LayoutDashboard, Users, Settings as SettingsIcon } from 'lucide-react'
+import { MessageSquare, Calendar, ClipboardList, LayoutDashboard, Users, Settings as SettingsIcon, LogOut } from 'lucide-react'
 import { useAuth } from './contexts/AuthContext'
 import { useSettings } from './contexts/SettingsContext'
 import Dashboard from './pages/Dashboard'
@@ -8,9 +9,10 @@ import Schedule from './pages/Schedule'
 import TimeOff from './pages/TimeOff'
 import Contacts from './pages/Contacts'
 import Settings from './pages/Settings'
+import Login from './pages/Login'
 
 function App() {
-  const { user } = useAuth()
+  const { user, loading, login, logout } = useAuth()
   const { settings } = useSettings()
 
   const accentRgba = (alpha) => {
@@ -19,6 +21,21 @@ function App() {
     const g = parseInt(hex.substring(2, 4), 16)
     const b = parseInt(hex.substring(4, 6), 16)
     return `rgba(${r},${g},${b},${alpha})`
+  }
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'var(--bg-primary)', color: 'var(--text-secondary)', fontSize: '14px',
+      }}>
+        Checking credentials...
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Login onLogin={login} />
   }
 
   return (
@@ -69,11 +86,17 @@ function App() {
           </NavLink>
         </nav>
         <div className="sidebar-user">
-          <div className="avatar avatar-blue">{settings.logoInitials}</div>
+          <div className="avatar avatar-blue">{(user.name || 'U')[0].toUpperCase()}</div>
           <div className="sidebar-user-info">
-            <div className="sidebar-user-name">{settings.dispatcherName}</div>
-            <div className="sidebar-user-role">Dispatcher</div>
+            <div className="sidebar-user-name">{user.name || 'User'}</div>
+            <div className="sidebar-user-role">{user.phone || 'Dispatcher'}</div>
           </div>
+          <button onClick={logout} title="Sign out" style={{
+            background: 'none', border: 'none', color: 'var(--text-secondary)',
+            cursor: 'pointer', padding: '4px', marginLeft: 'auto', display: 'flex',
+          }}>
+            <LogOut size={16} />
+          </button>
         </div>
       </aside>
       <main className="main-content">
