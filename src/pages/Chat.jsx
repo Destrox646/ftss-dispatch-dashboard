@@ -4,6 +4,8 @@ import { format } from 'date-fns'
 import { contacts } from '../data/contacts'
 import { useChatMessages, sendMessage } from '../hooks/useFirestore'
 import { useAuth } from '../contexts/AuthContext'
+import { httpsCallable } from 'firebase/functions'
+import { functions } from '../firebase'
 
 const ftssContacts = contacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
 
@@ -33,6 +35,8 @@ export default function Chat() {
   const [broadcastSearch, setBroadcastSearch] = useState('')
   const [selectedRecipients, setSelectedRecipients] = useState(new Set(ftssContacts.map(c => c.id)))
   const [broadcastSent, setBroadcastSent] = useState(false)
+  const [broadcastSending, setBroadcastSending] = useState(false)
+  const [broadcastResult, setBroadcastResult] = useState(null)
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
@@ -167,7 +171,7 @@ export default function Chat() {
           </div>
           {activeInfo.type === 'group' && (
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => { setBroadcastOpen(true); setBroadcastMsg(''); setBroadcastSent(false); setBroadcastSearch(''); setSelectedRecipients(new Set(ftssContacts.map(c => c.id))) }} className="btn btn-primary btn-sm">
+              <button onClick={() => { setBroadcastOpen(true); setBroadcastMsg(''); setBroadcastSent(false); setBroadcastSending(false); setBroadcastResult(null); setBroadcastSearch(''); setSelectedRecipients(new Set(ftssContacts.map(c => c.id))) }} className="btn btn-primary btn-sm">
                 <Radio size={14} /> Mass Text
               </button>
               <button onClick={() => setShowMembers(m => !m)} className="btn btn-ghost btn-sm">
@@ -309,6 +313,8 @@ export default function Chat() {
               <form onSubmit={async (e) => {
                 e.preventDefault()
                 if (!broadcastMsg.trim()) return
+                setBroadcastSending(true)
+                // Send in-app chat message
                 await sendMessage({
                   senderId: user.uid,
                   senderName: user.email.split('@')[0],
@@ -318,7 +324,23 @@ export default function Chat() {
                   broadcast: true,
                   recipientCount: selectedRecipients.size,
                 })
+                // Send actual SMS via Cloud Function
+                const selected = ftssContacts.filter(c => selectedRecipients.has(c.id))
+                const smsRecipients = selected
+                  .filter(c => c.phones && c.phones.length > 0)
+                  .map(c => ({ name: c.name, phone: c.phones[0].number }))
+                let smsResult = null
+                if (smsRecipients.length > 0) {
+                  try {
+                    const sendMassText = httpsCallable(functions, 'sendMassText')
+                    smsResult = (await sendMassText({ message: broadcastMsg.trim(), recipients: smsRecipients })).data
+                  } catch (err) {
+                    smsResult = { success: 0, failed: smsRecipients.length, errors: [{ error: err.message }] }
+                  }
+                }
+                setBroadcastSending(false)
                 setBroadcastSent(true)
+                setBroadcastResult(smsResult)
               }}>
                 <div className="modal-body">
                   <div className="form-group">
@@ -396,8 +418,12 @@ export default function Chat() {
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="btn btn-ghost" onClick={() => setBroadcastOpen(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary" disabled={!broadcastMsg.trim() || selectedRecipients.size === 0}>
-                    <Send size={14} /> Send to {selectedRecipients.size} contacts
+                  <button type="submit" className="btn btn-primary" disabled={!broadcastMsg.trim() || selectedRecipients.size === 0 || broadcastSending}>
+                    {broadcastSending ? (
+                      <><span className="spinner" /> Sending...</>
+                    ) : (
+                      <><Send size={14} /> Send to {selectedRecipients.size} contacts</>
+                    )}
                   </button>
                 </div>
               </form>
@@ -405,9 +431,24 @@ export default function Chat() {
               <div className="modal-body" style={{ textAlign: 'center', padding: '40px 24px' }}>
                 <CheckCircle size={48} style={{ color: '#10b981', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>Mass Text Sent</h3>
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '24px' }}>
+                <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px' }}>
                   Message delivered to {selectedRecipients.size} FTSS contacts
                 </p>
+                {broadcastResult && (
+                  <div style={{
+                    background: broadcastResult.failed > 0 ? 'var(--red-light)' : 'var(--green-light)',
+                    borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: '24px', fontSize: '13px',
+                  }}>
+                    <p style={{ fontWeight: 600, marginBottom: '4px' }}>
+                      SMS Results: {broadcastResult.success} sent, {broadcastResult.failed} failed
+                    </p>
+                    {broadcastResult.errors && broadcastResult.errors.length > 0 && (
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px' }}>
+                        {broadcastResult.errors.map(e => e.error).slice(0, 3).join('; ')}
+                      </p>
+                    )}
+                  </div>
+                )}
                 <button type="button" className="btn btn-primary" onClick={() => setBroadcastOpen(false)}>Done</button>
               </div>
             )}
