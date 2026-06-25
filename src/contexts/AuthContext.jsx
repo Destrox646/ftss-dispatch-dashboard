@@ -1,27 +1,15 @@
-import { createContext, useContext, useState, useEffect } from 'react'
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth'
-import { auth } from '../firebase'
+import { createContext, useContext } from 'react'
 
 const AuthContext = createContext(null)
 
+const guestUser = {
+  uid: 'guest',
+  email: 'dispatch@ftssservices.com',
+}
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser)
-      setLoading(false)
-    })
-    return unsub
-  }, [])
-
-  const login = (email, password) => signInWithEmailAndPassword(auth, email, password)
-  const signup = (email, password) => createUserWithEmailAndPassword(auth, email, password)
-  const logout = () => signOut(auth)
-
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user: guestUser, loading: false, logout: () => {} }}>
       {children}
     </AuthContext.Provider>
   )
