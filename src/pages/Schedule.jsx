@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, X, ChevronLeft, ChevronRight, Search, Users } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Search, Users, Download } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
 import { contacts } from '../data/contacts'
 import { useScheduleEntries, useScheduleLabels, addScheduleEntry, deleteScheduleEntry } from '../hooks/useFirestore'
@@ -94,6 +94,23 @@ export default function Schedule() {
 
   const avatarColors = ['avatar-blue', 'avatar-green', 'avatar-orange', 'avatar-purple', 'avatar-red']
 
+  const downloadCSV = () => {
+    const header = ['Schedule', ...DAYS.map((day, i) => `${day} ${format(weekDates[i], 'M/d')}`)]
+    const rows = rowLabels.map((label, rowIdx) => {
+      return [label, ...DAYS.map((_, dayIdx) => {
+        return getEntries(dayIdx, rowIdx).map(e => e.contactName.replace(/^FTSS\s*/i, '')).join(', ')
+      })]
+    })
+    const csv = [header, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `schedule-${format(weekStart, 'yyyy-MM-dd')}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <>
       <div className="page-header">
@@ -114,6 +131,9 @@ export default function Schedule() {
             </button>
             <button className="btn btn-ghost" style={{ marginLeft: '8px' }} onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
               Today
+            </button>
+            <button className="btn btn-ghost" style={{ marginLeft: '4px' }} onClick={downloadCSV} title="Download schedule as CSV">
+              <Download size={16} />
             </button>
           </div>
         </div>
