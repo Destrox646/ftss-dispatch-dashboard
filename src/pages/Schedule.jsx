@@ -26,6 +26,7 @@ export default function Schedule() {
   const [showAllContacts, setShowAllContacts] = useState(false)
   const [rowLabels, setRowLabels] = useState(savedLabels || defaultLabels)
   const [assignRole, setAssignRole] = useState('driver')
+  const [hoverCell, setHoverCell] = useState(null)
   const fileInputRef = useRef(null)
 
   // Sync labels from Firestore
@@ -291,7 +292,10 @@ export default function Schedule() {
                   <div key={dayIdx} style={{
                     background: cellBg, border: '1px solid var(--border)',
                     display: 'flex', flexDirection: 'column', position: 'relative',
-                  }}>
+                  }}
+                    onMouseEnter={() => setHoverCell({ dayIdx, rowIdx })}
+                    onMouseLeave={() => setHoverCell(null)}
+                  >
                     {/* Driver half */}
                     <div
                       onClick={() => canEdit && handleCellClick(dayIdx, rowIdx, 'driver')}
@@ -326,6 +330,38 @@ export default function Schedule() {
                       )}
                       {helperEntries.map(renderEntry)}
                     </div>
+                    {/* Hover tooltip */}
+                    {hoverCell && hoverCell.dayIdx === dayIdx && hoverCell.rowIdx === rowIdx && (driverEntries.length > 0 || helperEntries.length > 0) && (
+                      <div style={{
+                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                        background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '8px',
+                        padding: '8px 10px', zIndex: 50, minWidth: '140px', maxWidth: '220px',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.4)', pointerEvents: 'none',
+                      }}>
+                        {driverEntries.length > 0 && (
+                          <div style={{ marginBottom: helperEntries.length > 0 ? '6px' : 0 }}>
+                            <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Driver</div>
+                            {driverEntries.map(e => (
+                              <div key={e.id} style={{ fontSize: '11px', color: 'var(--text-primary)', padding: '1px 0', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <div className={`avatar ${avatarColors[e.contactName.charCodeAt(4) % avatarColors.length]}`} style={{ width: '14px', height: '14px', fontSize: '5px', flexShrink: 0 }}>{getInitials(e.contactName)}</div>
+                                {e.contactName.replace(/^FTSS\s*/i, '')}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {helperEntries.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Helper</div>
+                            {helperEntries.map(e => (
+                              <div key={e.id} style={{ fontSize: '11px', color: 'var(--text-primary)', padding: '1px 0', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <div className={`avatar ${avatarColors[e.contactName.charCodeAt(4) % avatarColors.length]}`} style={{ width: '14px', height: '14px', fontSize: '5px', flexShrink: 0 }}>{getInitials(e.contactName)}</div>
+                                {e.contactName.replace(/^FTSS\s*/i, '')}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })}
