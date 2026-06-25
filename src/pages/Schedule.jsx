@@ -352,41 +352,58 @@ export default function Schedule() {
         </div>
       </div>
 
-      {/* Hover Tooltip via Portal */}
+      {/* Hover Ring via Portal */}
       {hoverCell && tooltipPos && (() => {
         const driverEntries = getEntries(hoverCell.dayIdx, hoverCell.rowIdx, 'driver')
         const helperEntries = getEntries(hoverCell.dayIdx, hoverCell.rowIdx, 'helper')
-        if (driverEntries.length === 0 && helperEntries.length === 0) return null
+        const allEntries = [
+          ...driverEntries.map(e => ({ ...e, role: 'driver' })),
+          ...helperEntries.map(e => ({ ...e, role: 'helper' })),
+        ]
+        if (allEntries.length === 0) return null
+        const ringRadius = 70 + allEntries.length * 8
         return createPortal(
           <div style={{
-            position: 'fixed', top: tooltipPos.top - 6, left: tooltipPos.left,
-            transform: 'translate(-50%, -100%)',
-            background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '8px',
-            padding: '8px 10px', zIndex: 9999, minWidth: '140px', maxWidth: '220px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.4)', pointerEvents: 'none',
+            position: 'fixed', top: tooltipPos.top, left: tooltipPos.left,
+            width: 0, height: 0, zIndex: 9999, pointerEvents: 'none',
           }}>
-            {driverEntries.length > 0 && (
-              <div style={{ marginBottom: helperEntries.length > 0 ? '6px' : 0 }}>
-                <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Driver</div>
-                {driverEntries.map(e => (
-                  <div key={e.id} style={{ fontSize: '11px', color: 'var(--text-primary)', padding: '1px 0', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <div className={`avatar ${avatarColors[e.contactName.charCodeAt(4) % avatarColors.length]}`} style={{ width: '14px', height: '14px', fontSize: '5px', flexShrink: 0 }}>{getInitials(e.contactName)}</div>
-                    {e.contactName.replace(/^FTSS\s*/i, '')}
+            {/* Center cell glow */}
+            <div style={{
+              position: 'absolute', top: '-20px', left: '-20px', width: '40px', height: '40px',
+              borderRadius: '50%', background: 'var(--accent)', opacity: 0.12,
+            }} />
+            {allEntries.map((entry, i) => {
+              const angle = (2 * Math.PI * i) / allEntries.length - Math.PI / 2
+              const x = Math.cos(angle) * ringRadius
+              const y = Math.sin(angle) * ringRadius
+              const colorClass = entry.role === 'driver' ? 'avatar-blue' : 'avatar-green'
+              return (
+                <div key={entry.id} style={{
+                  position: 'absolute',
+                  top: y, left: x,
+                  transform: 'translate(-50%, -50%)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
+                }}>
+                  <div className={`avatar ${colorClass}`} style={{
+                    width: '38px', height: '38px', fontSize: '12px',
+                    border: '2px solid var(--border)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                  }}>
+                    {getInitials(entry.contactName)}
                   </div>
-                ))}
-              </div>
-            )}
-            {helperEntries.length > 0 && (
-              <div>
-                <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Helper</div>
-                {helperEntries.map(e => (
-                  <div key={e.id} style={{ fontSize: '11px', color: 'var(--text-primary)', padding: '1px 0', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <div className={`avatar ${avatarColors[e.contactName.charCodeAt(4) % avatarColors.length]}`} style={{ width: '14px', height: '14px', fontSize: '5px', flexShrink: 0 }}>{getInitials(e.contactName)}</div>
-                    {e.contactName.replace(/^FTSS\s*/i, '')}
+                  <div style={{
+                    fontSize: '10px', fontWeight: 600, color: 'var(--text-primary)',
+                    background: 'var(--bg-tertiary)', border: '1px solid var(--border)',
+                    borderRadius: '6px', padding: '2px 6px', whiteSpace: 'nowrap',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                    maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis',
+                    textAlign: 'center',
+                  }}>
+                    {entry.contactName.replace(/^FTSS\s*/i, '')}
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              )
+            })}
           </div>,
           document.body
         )
