@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { Plus, X, ChevronLeft, ChevronRight, Search, Users, Download } from 'lucide-react'
+import { useState, useMemo, useRef } from 'react'
+import { Plus, X, ChevronLeft, ChevronRight, Search, Users, Download, Upload } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
 import { contacts } from '../data/contacts'
 import { useScheduleEntries, useScheduleLabels, addScheduleEntry, deleteScheduleEntry } from '../hooks/useFirestore'
@@ -25,6 +25,7 @@ export default function Schedule() {
   const [note, setNote] = useState('')
   const [showAllContacts, setShowAllContacts] = useState(false)
   const [rowLabels, setRowLabels] = useState(savedLabels || defaultLabels)
+  const fileInputRef = useRef(null)
 
   // Sync labels from Firestore
   useMemo(() => {
@@ -111,6 +112,69 @@ export default function Schedule() {
     URL.revokeObjectURL(url)
   }
 
+  const parseCSV = (text) => {
+    const rows = []
+    let row = []
+    let cell = ''
+    let inQuotes = false
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i]
+      if (inQuotes) {
+        if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++ }
+        else if (ch === '"') inQuotes = false
+        else cell += ch
+      } else {
+        if (ch === '"') inQuotes = true
+        else if (ch === ',') { row.push(cell.trim()); cell = '' }
+        else if (ch === '\n' || ch === '\r') {
+          if (ch === '\r' && text[i + 1] === '\n') i++
+          row.push(cell.trim()); rows.push(row); row = []; cell = ''
+        } else cell += ch
+      }
+    }
+    row.push(cell.trim())
+    if (row.some(c => c)) rows.push(row)
+    return rows
+  }
+
+  const importCSV = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const rows = parseCSV(reader.result)
+      if (rows.length < 2) return
+      const currentLabels = rowLabels.map(l => l.toLowerCase().trim())
+      for (let r = 1; r < rows.length; r++) {
+        const cells = rows[r]
+        const label = (cells[0] || '').toLowerCase().trim()
+        const rowIdx = currentLabels.indexOf(label)
+        if (rowIdx === -1) continue
+        for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+          const cell = (cells[dayIdx + 1] || '').trim()
+          if (!cell) continue
+          const names = cell.split(',').map(n => n.trim()).filter(Boolean)
+          for (const name of names) {
+            const fullName = 'FTSS ' + name
+            const contact = ftssContacts.find(c => c.name.toLowerCase() === fullName.toLowerCase())
+            if (!contact) continue
+            const dateStr = format(weekDates[dayIdx], 'yyyy-MM-dd')
+            addScheduleEntry({
+              date: dateStr,
+              row: rowIdx,
+              contactId: contact.id,
+              contactName: contact.name,
+              phone: contact.phones[0]?.number || '',
+              note: '',
+            })
+          }
+        }
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
+
   return (
     <>
       <div className="page-header">
@@ -135,6 +199,10 @@ export default function Schedule() {
             <button className="btn btn-ghost" style={{ marginLeft: '4px' }} onClick={downloadCSV} title="Download schedule as CSV">
               <Download size={16} />
             </button>
+            <button className="btn btn-ghost" style={{ marginLeft: '4px' }} onClick={() => fileInputRef.current?.click()} title="Import schedule from CSV">
+              <Upload size={16} />
+            </button>
+            <input ref={fileInputRef} type="file" accept=".csv" hidden onChange={importCSV} />
           </div>
         </div>
       </div>
