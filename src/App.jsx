@@ -32,7 +32,11 @@ function App() {
       `}</style>
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">{settings.logoInitials}</div>
+          {settings.logoImage ? (
+            <img src={settings.logoImage} alt="Logo" className="sidebar-logo-icon" style={{ objectFit: 'cover' }} />
+          ) : (
+            <div className="sidebar-logo-icon">{settings.logoInitials}</div>
+          )}
           <div>
             <h1>{settings.companyName}</h1>
             <span>{settings.dashboardSubtitle}</span>

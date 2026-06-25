@@ -1,9 +1,13 @@
-import { useState, useMemo } from 'react'
-import { Search, Phone, Mail, Building2, User } from 'lucide-react'
+import { useState, useMemo, useRef } from 'react'
+import { Search, Phone, Mail, Building2, User, Camera } from 'lucide-react'
 import { contacts } from '../data/contacts'
+import { useContactAvatars } from '../hooks/useContactAvatars'
 
 export default function Contacts() {
   const [search, setSearch] = useState('')
+  const { avatars, setAvatar, removeAvatar } = useContactAvatars()
+  const avatarInputRef = useRef(null)
+  const [editingContactId, setEditingContactId] = useState(null)
 
   const ftssContacts = useMemo(() => contacts.filter(c => c.name.toUpperCase().startsWith('FTSS')), [])
 
@@ -23,6 +27,18 @@ export default function Contacts() {
   }
 
   const avatarColors = ['avatar-blue', 'avatar-green', 'avatar-orange', 'avatar-purple', 'avatar-red']
+
+  const handleAvatarFileChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !editingContactId) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      setAvatar(editingContactId, ev.target.result)
+      setEditingContactId(null)
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
 
   return (
     <>
@@ -74,8 +90,26 @@ export default function Contacts() {
                   <tr key={c.id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className={`avatar ${avatarColors[c.name.charCodeAt(0) % avatarColors.length]}`} style={{ width: '32px', height: '32px', fontSize: '10px' }}>
-                          {getInitials(c.firstName || '?', c.lastName || '?')}
+                        <div
+                          className={`avatar ${avatarColors[c.name.charCodeAt(0) % avatarColors.length]}`}
+                          style={{ width: '32px', height: '32px', fontSize: '10px', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
+                          title="Click to upload photo"
+                          onClick={() => { setEditingContactId(c.id); avatarInputRef.current?.click() }}
+                        >
+                          {avatars[c.id] ? (
+                            <img src={avatars[c.id]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                          ) : (
+                            getInitials(c.firstName || '?', c.lastName || '?')
+                          )}
+                          <div style={{
+                            position: 'absolute', inset: 0, borderRadius: '50%',
+                            background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            opacity: 0, transition: 'opacity 0.15s',
+                          }}
+                            className="avatar-overlay"
+                          >
+                            <Camera size={12} color="white" />
+                          </div>
                         </div>
                         <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{c.name}</span>
                       </div>
@@ -122,7 +156,17 @@ export default function Contacts() {
             </table>
           </div>
         </div>
+        <input
+          ref={avatarInputRef}
+          type="file"
+          accept="image/png"
+          onChange={handleAvatarFileChange}
+          style={{ display: 'none' }}
+        />
       </div>
+      <style>{`
+        .avatar:hover .avatar-overlay { opacity: 1 !important; }
+      `}</style>
     </>
   )
 }

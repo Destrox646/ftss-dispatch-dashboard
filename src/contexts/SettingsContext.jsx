@@ -10,6 +10,7 @@ const DEFAULTS = {
   dashboardSubtitle: 'Dispatch Dashboard',
   greetingOverride: '',
   scheduleEditEnabled: false,
+  logoImage: '',
 }
 
 function loadSettings() {

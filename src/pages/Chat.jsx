@@ -6,6 +6,7 @@ import { useChatMessages, sendMessage } from '../hooks/useFirestore'
 import { useAuth } from '../contexts/AuthContext'
 import { httpsCallable } from 'firebase/functions'
 import { functions } from '../firebase'
+import { useContactAvatars } from '../hooks/useContactAvatars'
 
 const ftssContacts = contacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
 
@@ -37,6 +38,7 @@ export default function Chat() {
   const [broadcastSent, setBroadcastSent] = useState(false)
   const [broadcastSending, setBroadcastSending] = useState(false)
   const [broadcastResult, setBroadcastResult] = useState(null)
+  const { avatars } = useContactAvatars()
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
@@ -75,6 +77,20 @@ export default function Chat() {
   const getAvatarColor = (name) => {
     const colors = ['avatar-blue', 'avatar-green', 'avatar-orange', 'avatar-purple', 'avatar-red']
     return colors[(name || '').charCodeAt(0) % colors.length]
+  }
+
+  const getContactAvatar = (name) => {
+    const contact = ftssContacts.find(c => c.name === name)
+    return contact ? avatars[contact.id] : null
+  }
+
+  const renderAvatar = (name, initials, size, extraClass, extraStyle) => {
+    const contactImg = getContactAvatar(name)
+    const style = { width: size, height: size, fontSize: `${Math.round(parseInt(size) * 0.3)}px`, flexShrink: 0, objectFit: 'cover', borderRadius: '50%', ...extraStyle }
+    if (contactImg) {
+      return <img src={contactImg} alt="" className={`avatar ${extraClass || ''}`} style={style} />
+    }
+    return <div className={`avatar ${extraClass || getAvatarColor(name)}`} style={style}>{initials}</div>
   }
 
   return (
@@ -204,9 +220,7 @@ export default function Chat() {
                     marginTop: showAvatar ? '20px' : '4px',
                     justifyContent: isMe ? 'flex-end' : 'flex-start',
                   }}>
-                    {!isMe && showAvatar && (
-                      <div className={`avatar ${getAvatarColor(msg.senderName)}`} style={{ width: '36px', height: '36px', fontSize: '11px', marginTop: '2px' }}>{msg.senderAvatar}</div>
-                    )}
+                    {!isMe && showAvatar && renderAvatar(msg.senderName, msg.senderAvatar, '36px', { marginTop: '2px' })}
                     {!isMe && !showAvatar && <div style={{ width: '36px', flexShrink: 0 }} />}
                     <div style={{ maxWidth: '65%', minWidth: '80px' }}>
                       {showAvatar && !isMe && (
@@ -230,9 +244,7 @@ export default function Chat() {
                         </div>
                       )}
                     </div>
-                    {isMe && showAvatar && (
-                      <div className="avatar avatar-purple" style={{ width: '36px', height: '36px', fontSize: '11px', marginTop: '2px' }}>{msg.senderAvatar}</div>
-                    )}
+                    {isMe && showAvatar && renderAvatar(msg.senderName, msg.senderAvatar, '36px', { marginTop: '2px' }, 'avatar-purple')}
                     {isMe && !showAvatar && <div style={{ width: '36px', flexShrink: 0 }} />}
                   </div>
                 )
@@ -280,11 +292,7 @@ export default function Chat() {
                   display: 'flex', alignItems: 'center', gap: '10px',
                   padding: '8px 16px', borderBottom: '1px solid var(--border)',
                 }}>
-                  <div className={`avatar ${getAvatarColor(m.name)}`} style={{
-                    width: '28px', height: '28px', fontSize: '9px',
-                  }}>
-                    {(m.firstName[0] || '') + (m.lastName[0] || '')}
-                  </div>
+                  {renderAvatar(m.name, (m.firstName[0] || '') + (m.lastName[0] || ''), '28px')}
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
                     {m.phones[0] && (
@@ -399,9 +407,7 @@ export default function Chat() {
                               }}
                               style={{ accentColor: 'var(--accent)' }}
                             />
-                            <div className={`avatar ${colors[c.name.charCodeAt(4) % colors.length]}`} style={{ width: '26px', height: '26px', fontSize: '9px', flexShrink: 0 }}>
-                              {initials}
-                            </div>
+                            {renderAvatar(c.name, initials, '26px')}
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {c.name.replace(/^FTSS\s*/i, '')}

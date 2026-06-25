@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useSettings } from '../contexts/SettingsContext'
 import { Save, Building2, User, Palette, Lock } from 'lucide-react'
 
@@ -16,18 +16,29 @@ export default function Settings() {
   const { settings, updateSettings } = useSettings()
   const [companyName, setCompanyName] = useState(settings.companyName)
   const [logoInitials, setLogoInitials] = useState(settings.logoInitials)
+  const [logoImage, setLogoImage] = useState(settings.logoImage)
   const [dispatcherName, setDispatcherName] = useState(settings.dispatcherName)
   const [accentColor, setAccentColor] = useState(settings.accentColor)
   const [dashboardSubtitle, setDashboardSubtitle] = useState(settings.dashboardSubtitle)
   const [greetingOverride, setGreetingOverride] = useState(settings.greetingOverride)
   const [scheduleEditEnabled, setScheduleEditEnabled] = useState(settings.scheduleEditEnabled)
   const [saved, setSaved] = useState(false)
+  const logoInputRef = useRef(null)
+
+  const handleLogoImageChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => setLogoImage(ev.target.result)
+    reader.readAsDataURL(file)
+  }
 
   const handleSave = (e) => {
     e.preventDefault()
     updateSettings({
       companyName: companyName.trim() || 'FTSS Services LLC',
       logoInitials: logoInitials.trim().toUpperCase().slice(0, 2) || 'FT',
+      logoImage,
       dispatcherName: dispatcherName.trim() || 'Dispatcher',
       accentColor,
       dashboardSubtitle: dashboardSubtitle.trim() || 'Dispatch Dashboard',
@@ -66,7 +77,7 @@ export default function Settings() {
                   placeholder="Dispatch Dashboard"
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
+              <div className="form-group">
                 <label>Logo Initials</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div className="sidebar-logo-icon" style={{ width: '32px', height: '32px', fontSize: '12px', flexShrink: 0 }}>
@@ -81,6 +92,33 @@ export default function Settings() {
                     style={{ width: '80px' }}
                   />
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>2 characters max</span>
+                </div>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Logo Image (optional)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {logoImage ? (
+                    <img src={logoImage} alt="Logo preview" style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />
+                  ) : (
+                    <div className="sidebar-logo-icon" style={{ width: '40px', height: '40px', fontSize: '14px', flexShrink: 0 }}>
+                      {logoInitials.slice(0, 2).toUpperCase() || 'FT'}
+                    </div>
+                  )}
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/png"
+                    onChange={handleLogoImageChange}
+                    style={{ display: 'none' }}
+                  />
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => logoInputRef.current?.click()}>
+                    Upload PNG
+                  </button>
+                  {logoImage && (
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setLogoImage('')}>
+                      Remove
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
