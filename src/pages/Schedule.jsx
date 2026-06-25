@@ -7,8 +7,8 @@ const ftssContacts = contacts.filter(c => c.name.toUpperCase().startsWith('FTSS'
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 const defaultLabels = [
-  '6 AM', '7 AM', '8 AM', '9 AM', '10 AM', '11 AM', '12 PM',
-  '1 PM', '2 PM', '3 PM', '4 PM', '5 PM', '6 PM', '7 PM',
+  'RXO Milwaukee 1', 'RXO Milwaukee 2', 'JB Hunt Appleton 1', 'JB Hunt Appleton 2', 'JB Hunt Appleton 3', 'JB Hunt Appleton 4', 'JB Hunt Waukesha 1',
+  'JB Hunt Waukesha 2', 'JB Hunt Detroit 1', 'RXO Grand Rapids 1', 'JB Hunt Des Moines 1', 'Request offs 1', 'Request offs 2', 'Notes 1', 'Notes 2',
 ]
 
 export default function Schedule() {
