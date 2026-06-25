@@ -2,14 +2,13 @@ import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
-// TODO: Replace these with your actual Firebase config from console.firebase.google.com
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyB8JPD3QOmTYFmzokn6zBm5ovARphmOkMA",
+  authDomain: "ftss-dispatcher.firebaseapp.com",
+  projectId: "ftss-dispatcher",
+  storageBucket: "ftss-dispatcher.firebasestorage.app",
+  messagingSenderId: "392375812372",
+  appId: "1:392375812372:web:abbcb0675a77b16024c201"
 }
 
 const app = initializeApp(firebaseConfig)
