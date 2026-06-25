@@ -663,6 +663,11 @@ tr:hover td {
   color: var(--text-muted);
 }
 
+/* Schedule cell hover plus */
+.slot-hover-plus:hover {
+  opacity: 1 !important;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .stats-grid {

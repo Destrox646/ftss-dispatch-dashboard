@@ -25,6 +25,7 @@ export default function Schedule() {
   const [note, setNote] = useState('')
   const [showAllContacts, setShowAllContacts] = useState(false)
   const [rowLabels, setRowLabels] = useState(savedLabels || defaultLabels)
+  const [assignRole, setAssignRole] = useState('driver')
   const fileInputRef = useRef(null)
 
   // Sync labels from Firestore
@@ -47,13 +48,14 @@ export default function Schedule() {
     ).slice(0, 30)
   }, [search, showAllContacts])
 
-  const getEntries = (dayIdx, rowIdx) => {
+  const getEntries = (dayIdx, rowIdx, role) => {
     const dateStr = format(weekDates[dayIdx], 'yyyy-MM-dd')
-    return entries.filter(e => e.date === dateStr && e.row === rowIdx)
+    return entries.filter(e => e.date === dateStr && e.row === rowIdx && (role ? (e.role || 'driver') === role : true))
   }
 
-  const handleCellClick = (dayIdx, rowIdx) => {
+  const handleCellClick = (dayIdx, rowIdx, role) => {
     setModalCell({ dayIdx, rowIdx })
+    setAssignRole(role || 'driver')
     setSearch('')
     setSelectedContact(null)
     setNote('')
@@ -68,6 +70,7 @@ export default function Schedule() {
     addScheduleEntry({
       date: dateStr,
       row: modalCell.rowIdx,
+      role: assignRole,
       contactId: selectedContact.id,
       contactName: selectedContact.name,
       phone: selectedContact.phones[0]?.number || '',
@@ -97,10 +100,14 @@ export default function Schedule() {
 
   const downloadCSV = () => {
     const header = ['Schedule', ...DAYS.map((day, i) => `${day} ${format(weekDates[i], 'M/d')}`)]
-    const rows = rowLabels.map((label, rowIdx) => {
-      return [label, ...DAYS.map((_, dayIdx) => {
-        return getEntries(dayIdx, rowIdx).map(e => e.contactName.replace(/^FTSS\s*/i, '')).join(', ')
-      })]
+    const rows = []
+    rowLabels.forEach((label, rowIdx) => {
+      rows.push([`${label} Driver`, ...DAYS.map((_, dayIdx) => {
+        return getEntries(dayIdx, rowIdx, 'driver').map(e => e.contactName.replace(/^FTSS\s*/i, '')).join(', ')
+      })])
+      rows.push([`${label} Helper`, ...DAYS.map((_, dayIdx) => {
+        return getEntries(dayIdx, rowIdx, 'helper').map(e => e.contactName.replace(/^FTSS\s*/i, '')).join(', ')
+      })])
     })
     const csv = [header, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -257,53 +264,68 @@ export default function Schedule() {
                 />
               </div>
               {DAYS.map((_, dayIdx) => {
-                const cellEntries = getEntries(dayIdx, rowIdx)
+                const driverEntries = getEntries(dayIdx, rowIdx, 'driver')
+                const helperEntries = getEntries(dayIdx, rowIdx, 'helper')
                 const isToday = format(weekDates[dayIdx], 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-                return (
-                  <div
-                    key={dayIdx}
-                    onClick={() => canEdit && handleCellClick(dayIdx, rowIdx)}
-                    style={{
-                      minHeight: '44px', padding: '4px 6px',
-                      background: isToday ? 'rgba(59, 130, 246, 0.04)' : 'var(--bg-secondary)',
-                      border: '1px solid var(--border)', cursor: canEdit ? 'pointer' : 'default',
-                      transition: 'background 0.1s', position: 'relative',
-                    }}
-                    onMouseEnter={e => { if (canEdit) e.currentTarget.style.background = 'var(--bg-hover)' }}
-                    onMouseLeave={e => e.currentTarget.style.background = isToday ? 'rgba(59, 130, 246, 0.04)' : 'var(--bg-secondary)'}
-                  >
-                    {cellEntries.length === 0 && (
-                      <div style={{
-                        position: 'absolute', inset: 0, display: 'flex',
-                        alignItems: 'center', justifyContent: 'center',
-                        opacity: 0, transition: 'opacity 0.15s',
-                      }} className="slot-hover-plus">
-                        <Plus size={16} style={{ color: 'var(--text-muted)' }} />
-                      </div>
+                const cellBg = isToday ? 'rgba(59, 130, 246, 0.04)' : 'var(--bg-secondary)'
+                const renderEntry = (entry) => (
+                  <div key={entry.id} style={{
+                    background: 'var(--accent-light)', border: '1px solid rgba(59, 130, 246, 0.3)',
+                    borderRadius: '4px', padding: '2px 5px',
+                    fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px',
+                  }} onClick={e => e.stopPropagation()}>
+                    <div className={`avatar ${avatarColors[entry.contactName.charCodeAt(4) % avatarColors.length]}`} style={{ width: '16px', height: '16px', fontSize: '6px', flexShrink: 0 }}>
+                      {getInitials(entry.contactName)}
+                    </div>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                      {entry.contactName.replace(/^FTSS\s*/i, '')}
+                    </span>
+                    {canEdit && (
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0 1px', fontSize: '12px', lineHeight: 1, flexShrink: 0 }}
+                      >&times;</button>
                     )}
-                    {cellEntries.map(entry => (
-                      <div key={entry.id} style={{
-                        background: 'var(--accent-light)', border: '1px solid rgba(59, 130, 246, 0.3)',
-                        borderRadius: '4px', padding: '4px 6px', marginBottom: '2px',
-                        fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px',
-                      }} onClick={e => e.stopPropagation()}>
-                        <div className={`avatar ${avatarColors[entry.contactName.charCodeAt(4) % avatarColors.length]}`} style={{ width: '18px', height: '18px', fontSize: '7px', flexShrink: 0 }}>
-                          {getInitials(entry.contactName)}
+                  </div>
+                )
+                return (
+                  <div key={dayIdx} style={{
+                    background: cellBg, border: '1px solid var(--border)',
+                    display: 'flex', flexDirection: 'column', position: 'relative',
+                  }}>
+                    {/* Driver half */}
+                    <div
+                      onClick={() => canEdit && handleCellClick(dayIdx, rowIdx, 'driver')}
+                      style={{
+                        flex: 1, minHeight: '28px', padding: '3px 4px', display: 'flex', flexWrap: 'wrap', gap: '2px', alignContent: 'flex-start',
+                        cursor: canEdit ? 'pointer' : 'default', borderBottom: '1px solid var(--border)',
+                      }}
+                      onMouseEnter={e => { if (canEdit) e.currentTarget.style.background = 'var(--bg-hover)' }}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      {driverEntries.length === 0 && (
+                        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.15s' }} className="slot-hover-plus">
+                          <Plus size={14} style={{ color: 'var(--text-muted)' }} />
                         </div>
-                        <span style={{ color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                          {entry.contactName.replace(/^FTSS\s*/i, '')}
-                        </span>
-                        {canEdit && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
-                            style={{
-                              background: 'none', border: 'none', color: 'var(--text-muted)',
-                              cursor: 'pointer', padding: '0 2px', fontSize: '12px', lineHeight: 1, flexShrink: 0,
-                            }}
-                          >&times;</button>
-                        )}
-                      </div>
-                    ))}
+                      )}
+                      {driverEntries.map(renderEntry)}
+                    </div>
+                    {/* Helper half */}
+                    <div
+                      onClick={() => canEdit && handleCellClick(dayIdx, rowIdx, 'helper')}
+                      style={{
+                        flex: 1, minHeight: '28px', padding: '3px 4px', display: 'flex', flexWrap: 'wrap', gap: '2px', alignContent: 'flex-start',
+                        cursor: canEdit ? 'pointer' : 'default',
+                      }}
+                      onMouseEnter={e => { if (canEdit) e.currentTarget.style.background = 'var(--bg-hover)' }}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      {helperEntries.length === 0 && (
+                        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.15s' }} className="slot-hover-plus">
+                          <Plus size={14} style={{ color: 'var(--text-muted)' }} />
+                        </div>
+                      )}
+                      {helperEntries.map(renderEntry)}
+                    </div>
                   </div>
                 )
               })}
@@ -324,6 +346,18 @@ export default function Schedule() {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+                  <button type="button"
+                    className={`btn btn-sm ${assignRole === 'driver' ? 'btn-primary' : 'btn-ghost'}`}
+                    onClick={() => setAssignRole('driver')}
+                    style={{ fontSize: '12px', flex: 1 }}
+                  >Driver</button>
+                  <button type="button"
+                    className={`btn btn-sm ${assignRole === 'helper' ? 'btn-primary' : 'btn-ghost'}`}
+                    onClick={() => setAssignRole('helper')}
+                    style={{ fontSize: '12px', flex: 1 }}
+                  >Helper</button>
+                </div>
                 {!selectedContact ? (
                   <>
                     <div className="form-group">
