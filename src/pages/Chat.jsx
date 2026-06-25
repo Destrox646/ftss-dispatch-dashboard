@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, Hash, Users, Plus, ChevronDown, ChevronRight, Radio, X, Check, Search, CheckCircle } from 'lucide-react'
+import { Send, Hash, Users, ChevronDown, ChevronRight, Radio, X, Search, CheckCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { contacts } from '../data/contacts'
+import { useChatMessages, sendMessage } from '../hooks/useFirestore'
+import { useAuth } from '../contexts/AuthContext'
 
 const ftssContacts = contacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
 
@@ -18,7 +20,9 @@ const ftssGroup = {
   memberCount: ftssContacts.length,
 }
 
-export default function Chat({ messages, setMessages, currentUser }) {
+export default function Chat() {
+  const { user } = useAuth()
+  const { data: messages } = useChatMessages()
   const [input, setInput] = useState('')
   const [activeChannel, setActiveChannel] = useState('general')
   const [showMembers, setShowMembers] = useState(false)
@@ -44,25 +48,25 @@ export default function Chat({ messages, setMessages, currentUser }) {
     ? ftssGroup
     : defaultChannels.find(c => c.id === activeChannel) || defaultChannels[0]
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault()
     if (!input.trim()) return
 
-    const newMsg = {
-      id: `m${Date.now()}`,
-      senderId: currentUser.id,
-      senderName: currentUser.name,
-      senderAvatar: currentUser.avatar,
+    await sendMessage({
+      senderId: user.uid,
+      senderName: user.email.split('@')[0],
+      senderAvatar: user.email[0].toUpperCase() + user.email[1].toUpperCase(),
       text: input.trim(),
-      timestamp: new Date(),
       channel: activeChannel,
-    }
-
-    setMessages(prev => [...prev, newMsg])
+    })
     setInput('')
   }
 
-  const formatTime = (date) => format(date, 'h:mm a')
+  const formatTime = (timestamp) => {
+    if (!timestamp) return ''
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+    return format(date, 'h:mm a')
+  }
 
   const getAvatarColor = (name) => {
     const colors = ['avatar-blue', 'avatar-green', 'avatar-orange', 'avatar-purple', 'avatar-red']
@@ -84,7 +88,6 @@ export default function Chat({ messages, setMessages, currentUser }) {
           <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Messages</h3>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-          {/* Channels section */}
           <button onClick={() => setChannelsOpen(o => !o)} style={{
             display: 'flex', alignItems: 'center', gap: '6px', width: '100%',
             padding: '6px 16px', background: 'none', border: 'none',
@@ -113,7 +116,6 @@ export default function Chat({ messages, setMessages, currentUser }) {
             </button>
           ))}
 
-          {/* Groups section */}
           <button onClick={() => setGroupsOpen(o => !o)} style={{
             display: 'flex', alignItems: 'center', gap: '6px', width: '100%',
             padding: '6px 16px', marginTop: '8px', background: 'none', border: 'none',
@@ -148,7 +150,6 @@ export default function Chat({ messages, setMessages, currentUser }) {
 
       {/* Main chat area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* Channel header */}
         <div style={{
           padding: '12px 24px',
           borderBottom: '1px solid var(--border)',
@@ -177,7 +178,6 @@ export default function Chat({ messages, setMessages, currentUser }) {
         </div>
 
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          {/* Messages */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 32px' }}>
               {channelMessages.length === 0 && (
@@ -191,7 +191,7 @@ export default function Chat({ messages, setMessages, currentUser }) {
                 </div>
               )}
               {channelMessages.map((msg, i) => {
-                const isMe = msg.senderId === currentUser.id
+                const isMe = msg.senderId === user.uid
                 const showAvatar = i === 0 || channelMessages[i - 1].senderId !== msg.senderId
 
                 return (
@@ -236,7 +236,6 @@ export default function Chat({ messages, setMessages, currentUser }) {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
             <form onSubmit={handleSend} style={{
               padding: '16px 32px 24px',
               borderTop: '1px solid var(--border)',
@@ -261,7 +260,6 @@ export default function Chat({ messages, setMessages, currentUser }) {
             </form>
           </div>
 
-          {/* Members panel */}
           {showMembers && activeInfo.type === 'group' && (
             <div style={{
               width: '260px', borderLeft: '1px solid var(--border)',
@@ -308,21 +306,18 @@ export default function Chat({ messages, setMessages, currentUser }) {
               <button className="modal-close" onClick={() => setBroadcastOpen(false)}><X size={20} /></button>
             </div>
             {!broadcastSent ? (
-              <form onSubmit={(e) => {
+              <form onSubmit={async (e) => {
                 e.preventDefault()
                 if (!broadcastMsg.trim()) return
-                const newMsg = {
-                  id: `m${Date.now()}`,
-                  senderId: currentUser.id,
-                  senderName: currentUser.name,
-                  senderAvatar: currentUser.avatar,
+                await sendMessage({
+                  senderId: user.uid,
+                  senderName: user.email.split('@')[0],
+                  senderAvatar: user.email[0].toUpperCase() + user.email[1].toUpperCase(),
                   text: broadcastMsg.trim(),
-                  timestamp: new Date(),
                   channel: 'ftss',
                   broadcast: true,
                   recipientCount: selectedRecipients.size,
-                }
-                setMessages(prev => [...prev, newMsg])
+                })
                 setBroadcastSent(true)
               }}>
                 <div className="modal-body">

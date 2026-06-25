@@ -1,7 +1,11 @@
-import { useState, useMemo } from 'react'
-import { Pencil, X, Check, Calendar, Users, MessageSquare, Clock, ChevronRight } from 'lucide-react'
+import { useMemo } from 'react'
+import { Calendar, Users, MessageSquare, ChevronRight } from 'lucide-react'
 import { format, startOfWeek, addDays, isToday } from 'date-fns'
 import { contacts } from '../data/contacts'
+import { useAuth } from '../contexts/AuthContext'
+import { useChatMessages } from '../hooks/useFirestore'
+import { useScheduleEntries } from '../hooks/useFirestore'
+import { useTimeOffRequests } from '../hooks/useFirestore'
 
 const ftssContacts = contacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
 
@@ -11,19 +15,18 @@ const QUICK_LINKS = [
   { label: 'Browse Contacts', path: '/contacts', icon: Users, color: '#10b981' },
 ]
 
-export default function Dashboard({ currentUser, setCurrentUser }) {
-  const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState({ name: currentUser.name, role: currentUser.role })
+export default function Dashboard() {
+  const { user } = useAuth()
+  const { data: messages } = useChatMessages()
+  const { data: entries } = useScheduleEntries()
+  const { data: requests } = useTimeOffRequests()
 
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
-  const handleSave = (e) => {
-    e.preventDefault()
-    const avatar = form.name.split(' ').map(n => n[0] || '').join('').toUpperCase().substring(0, 2)
-    setCurrentUser(prev => ({ ...prev, name: form.name, role: form.role, avatar }))
-    setEditing(false)
-  }
+  const pendingRequests = requests.filter(r => r.status === 'pending').length
+  const todayEntries = entries.filter(e => e.date === format(new Date(), 'yyyy-MM-dd')).length
+  const recentMessages = messages.slice(-3).reverse()
 
   const now = new Date()
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'
@@ -38,7 +41,7 @@ export default function Dashboard({ currentUser, setCurrentUser }) {
         <div className="card" style={{ marginBottom: '20px', background: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08))' }}>
           <div className="card-body" style={{ padding: '28px' }}>
             <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>
-              {greeting}, {currentUser.name.split(' ')[0]}
+              {greeting}, {user.email.split('@')[0]}
             </h2>
             <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
               {format(now, 'EEEE, MMMM d, yyyy')} — FTSS Services LLC Dispatch Dashboard
@@ -47,43 +50,22 @@ export default function Dashboard({ currentUser, setCurrentUser }) {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          {/* Dispatcher Card */}
+          {/* Stats Card */}
           <div className="card">
-            <div className="card-header">
-              <h3>Dispatcher</h3>
-              {!editing && (
-                <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ name: currentUser.name, role: currentUser.role }); setEditing(true) }}>
-                  <Pencil size={14} /> Edit
-                </button>
-              )}
-            </div>
-            <div className="card-body">
-              {!editing ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div className="avatar avatar-blue" style={{ width: '56px', height: '56px', fontSize: '18px' }}>
-                    {currentUser.avatar}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>{currentUser.name}</div>
-                    <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{currentUser.role}</div>
-                  </div>
-                </div>
-              ) : (
-                <form onSubmit={handleSave}>
-                  <div className="form-group">
-                    <label>Name</label>
-                    <input type="text" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} autoFocus />
-                  </div>
-                  <div className="form-group">
-                    <label>Role</label>
-                    <input type="text" required value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} />
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button type="button" className="btn btn-ghost" onClick={() => setEditing(false)}><X size={14} /> Cancel</button>
-                    <button type="submit" className="btn btn-primary"><Check size={14} /> Save</button>
-                  </div>
-                </form>
-              )}
+            <div className="card-header"><h3>Today's Overview</h3></div>
+            <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--accent)' }}>{todayEntries}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Assignments</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--yellow)' }}>{pendingRequests}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Pending Off</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: '#8b5cf6' }}>{messages.length}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Messages</div>
+              </div>
             </div>
           </div>
 
@@ -150,8 +132,35 @@ export default function Dashboard({ currentUser, setCurrentUser }) {
             </div>
           </div>
 
-          {/* FTSS Contacts Summary */}
+          {/* Recent Activity */}
           <div className="card">
+            <div className="card-header">
+              <h3>Recent Activity</h3>
+              <a href="/chat" style={{ fontSize: '13px', color: 'var(--accent)', textDecoration: 'none' }}>All messages &rarr;</a>
+            </div>
+            <div className="card-body">
+              {recentMessages.length === 0 ? (
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>No messages yet</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {recentMessages.map(msg => (
+                    <div key={msg.id} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <div className="avatar avatar-blue" style={{ width: '28px', height: '28px', fontSize: '9px', flexShrink: 0 }}>
+                        {(msg.senderAvatar || '??')}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{msg.senderName}</div>
+                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.text}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* FTSS Contacts Summary */}
+          <div className="card" style={{ gridColumn: '1 / -1' }}>
             <div className="card-header">
               <h3>FTSS Team</h3>
               <a href="/contacts" style={{ fontSize: '13px', color: 'var(--accent)', textDecoration: 'none' }}>All contacts &rarr;</a>

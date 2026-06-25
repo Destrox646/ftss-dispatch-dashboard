@@ -1,9 +1,11 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo } from 'react'
 import { Plus, X, Check, XIcon, Calendar, Search } from 'lucide-react'
 import { format, differenceInDays } from 'date-fns'
 import { contacts } from '../data/contacts'
+import { useTimeOffRequests, addTimeOffRequest, updateTimeOffStatus } from '../hooks/useFirestore'
 
-export default function TimeOff({ requests, setRequests }) {
+export default function TimeOff() {
+  const { data: requests } = useTimeOffRequests()
   const [showModal, setShowModal] = useState(false)
   const [tab, setTab] = useState('pending')
   const [search, setSearch] = useState('')
@@ -41,16 +43,14 @@ export default function TimeOff({ requests, setRequests }) {
     e.preventDefault()
     if (!selectedContact) return
 
-    setRequests(prev => [...prev, {
-      id: `to${Date.now()}`,
+    addTimeOffRequest({
       contactId: selectedContact.id,
       driverName: selectedContact.name,
       startDate: form.startDate,
       endDate: form.endDate,
       reason: form.reason,
       status: 'pending',
-      submittedAt: format(new Date(), 'yyyy-MM-dd'),
-    }])
+    })
     setShowModal(false)
     setSelectedContact(null)
     setSearch('')
@@ -63,12 +63,18 @@ export default function TimeOff({ requests, setRequests }) {
   }
 
   const updateStatus = (id, status) => {
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r))
+    updateTimeOffStatus(id, status)
   }
 
   const getDuration = (start, end) => {
     const days = differenceInDays(new Date(end + 'T12:00:00'), new Date(start + 'T12:00:00')) + 1
     return `${days} day${days > 1 ? 's' : ''}`
+  }
+
+  const toDate = (val) => {
+    if (!val) return null
+    if (val.toDate) return val.toDate()
+    return new Date(val + 'T12:00:00')
   }
 
   return (
@@ -145,12 +151,12 @@ export default function TimeOff({ requests, setRequests }) {
                       </div>
                     </td>
                     <td style={{ fontSize: '13px' }}>
-                      {format(new Date(req.startDate + 'T12:00:00'), 'MMM d')} – {format(new Date(req.endDate + 'T12:00:00'), 'MMM d, yyyy')}
+                      {format(toDate(req.startDate), 'MMM d')} – {format(toDate(req.endDate), 'MMM d, yyyy')}
                     </td>
                     <td>{getDuration(req.startDate, req.endDate)}</td>
                     <td style={{ color: 'var(--text-secondary)' }}>{req.reason}</td>
                     <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                      {format(new Date(req.submittedAt + 'T12:00:00'), 'MMM d')}
+                      {req.submittedAt ? format(toDate(req.submittedAt), 'MMM d') : '—'}
                     </td>
                     <td>
                       <span className={`badge badge-${req.status}`}>

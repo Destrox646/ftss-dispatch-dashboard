@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Plus, X, ChevronLeft, ChevronRight, Search, Users } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
 import { contacts } from '../data/contacts'
+import { useScheduleEntries, useScheduleLabels, addScheduleEntry, deleteScheduleEntry } from '../hooks/useFirestore'
 
 const ftssContacts = contacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -12,21 +13,20 @@ const defaultLabels = [
 ]
 
 export default function Schedule() {
+  const { data: entries } = useScheduleEntries()
+  const { labels: savedLabels, saveLabels } = useScheduleLabels()
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
-  const [entries, setEntries] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('schedule-entries')) || [] } catch { return [] }
-  })
   const [modalCell, setModalCell] = useState(null)
   const [search, setSearch] = useState('')
   const [selectedContact, setSelectedContact] = useState(null)
   const [note, setNote] = useState('')
   const [showAllContacts, setShowAllContacts] = useState(false)
-  const [rowLabels, setRowLabels] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('schedule-labels')) || defaultLabels } catch { return defaultLabels }
-  })
+  const [rowLabels, setRowLabels] = useState(savedLabels || defaultLabels)
 
-  useEffect(() => { localStorage.setItem('schedule-entries', JSON.stringify(entries)) }, [entries])
-  useEffect(() => { localStorage.setItem('schedule-labels', JSON.stringify(rowLabels)) }, [rowLabels])
+  // Sync labels from Firestore
+  useMemo(() => {
+    if (savedLabels) setRowLabels(savedLabels)
+  }, [savedLabels])
 
   const weekDates = useMemo(() =>
     DAYS.map((_, i) => addDays(weekStart, i)),
@@ -61,20 +61,26 @@ export default function Schedule() {
     if (!selectedContact) return
 
     const dateStr = format(weekDates[modalCell.dayIdx], 'yyyy-MM-dd')
-    setEntries(prev => [...prev, {
-      id: `e${Date.now()}`,
+    addScheduleEntry({
       date: dateStr,
       row: modalCell.rowIdx,
       contactId: selectedContact.id,
       contactName: selectedContact.name,
       phone: selectedContact.phones[0]?.number || '',
       note,
-    }])
+    })
     setModalCell(null)
   }
 
   const handleDelete = (entryId) => {
-    setEntries(prev => prev.filter(e => e.id !== entryId))
+    deleteScheduleEntry(entryId)
+  }
+
+  const handleLabelChange = (rowIdx, value) => {
+    const next = [...(savedLabels || defaultLabels)]
+    next[rowIdx] = value
+    setRowLabels(next)
+    saveLabels(next)
   }
 
   const getInitials = (name) => {
@@ -147,7 +153,7 @@ export default function Schedule() {
                 <input
                   type="text"
                   value={rowLabels[rowIdx]}
-                  onChange={e => setRowLabels(prev => { const next = [...prev]; next[rowIdx] = e.target.value; return next; })}
+                  onChange={e => handleLabelChange(rowIdx, e.target.value)}
                   style={{
                     width: '100%', background: 'transparent', border: 'none', outline: 'none',
                     padding: '8px 10px', fontSize: '13px', fontWeight: 500,
