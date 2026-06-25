@@ -13,14 +13,29 @@ function App() {
   const { user } = useAuth()
   const { settings } = useSettings()
 
+  const accentRgba = (alpha) => {
+    const hex = settings.accentColor.replace('#', '')
+    const r = parseInt(hex.substring(0, 2), 16)
+    const g = parseInt(hex.substring(2, 4), 16)
+    const b = parseInt(hex.substring(4, 6), 16)
+    return `rgba(${r},${g},${b},${alpha})`
+  }
+
   return (
     <>
+      <style>{`
+        :root {
+          --accent: ${settings.accentColor};
+          --accent-hover: ${settings.accentColor}dd;
+          --accent-light: ${accentRgba(0.15)};
+        }
+      `}</style>
       <aside className="sidebar">
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon">{settings.logoInitials}</div>
           <div>
             <h1>{settings.companyName}</h1>
-            <span>Dispatch Dashboard</span>
+            <span>{settings.dashboardSubtitle}</span>
           </div>
         </div>
         <nav className="sidebar-nav">

@@ -5,16 +5,18 @@ import { contacts } from '../data/contacts'
 export default function Contacts() {
   const [search, setSearch] = useState('')
 
+  const ftssContacts = useMemo(() => contacts.filter(c => c.name.toUpperCase().startsWith('FTSS')), [])
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return contacts.slice(0, 50)
+    if (!search.trim()) return ftssContacts.slice(0, 50)
     const q = search.toLowerCase()
-    return contacts.filter(c =>
+    return ftssContacts.filter(c =>
       c.name.toLowerCase().includes(q) ||
       c.email.toLowerCase().includes(q) ||
       c.organization.toLowerCase().includes(q) ||
       c.phones.some(p => p.number.includes(q))
     ).slice(0, 100)
-  }, [search])
+  }, [search, ftssContacts])
 
   const getInitials = (first, last) => {
     return `${(first[0] || '').toUpperCase()}${(last[0] || '').toUpperCase()}` || '?'
@@ -28,7 +30,7 @@ export default function Contacts() {
         <div className="page-header-row">
           <div>
             <h2>Contacts</h2>
-            <p>{contacts.length.toLocaleString()} contacts imported from Google</p>
+            <p>{ftssContacts.length.toLocaleString()} FTSS contacts</p>
           </div>
         </div>
       </div>

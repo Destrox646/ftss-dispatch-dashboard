@@ -43,10 +43,10 @@ export default function Dashboard() {
         <div className="card" style={{ marginBottom: '20px', background: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08))' }}>
           <div className="card-body" style={{ padding: '28px' }}>
             <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>
-              {greeting}, {settings.dispatcherName}
+              {settings.greetingOverride || greeting}, {settings.dispatcherName}
             </h2>
             <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-              {format(now, 'EEEE, MMMM d, yyyy')} — {settings.companyName} Dispatch Dashboard
+              {format(now, 'EEEE, MMMM d, yyyy')} — {settings.companyName} {settings.dashboardSubtitle}
             </p>
           </div>
         </div>

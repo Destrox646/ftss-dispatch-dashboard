@@ -3,6 +3,7 @@ import { Plus, X, ChevronLeft, ChevronRight, Search, Users } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
 import { contacts } from '../data/contacts'
 import { useScheduleEntries, useScheduleLabels, addScheduleEntry, deleteScheduleEntry } from '../hooks/useFirestore'
+import { useSettings } from '../contexts/SettingsContext'
 
 const ftssContacts = contacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -15,6 +16,8 @@ const defaultLabels = [
 export default function Schedule() {
   const { data: entries } = useScheduleEntries()
   const { labels: savedLabels, saveLabels } = useScheduleLabels()
+  const { settings } = useSettings()
+  const canEdit = settings.scheduleEditEnabled
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [modalCell, setModalCell] = useState(null)
   const [search, setSearch] = useState('')
@@ -153,11 +156,13 @@ export default function Schedule() {
                 <input
                   type="text"
                   value={rowLabels[rowIdx]}
-                  onChange={e => handleLabelChange(rowIdx, e.target.value)}
+                  onChange={e => canEdit && handleLabelChange(rowIdx, e.target.value)}
+                  readOnly={!canEdit}
                   style={{
                     width: '100%', background: 'transparent', border: 'none', outline: 'none',
                     padding: '8px 10px', fontSize: '13px', fontWeight: 500,
                     color: 'var(--text-primary)', fontFamily: 'inherit', textAlign: 'center',
+                    cursor: canEdit ? 'text' : 'default',
                   }}
                 />
               </div>
@@ -167,14 +172,14 @@ export default function Schedule() {
                 return (
                   <div
                     key={dayIdx}
-                    onClick={() => handleCellClick(dayIdx, rowIdx)}
+                    onClick={() => canEdit && handleCellClick(dayIdx, rowIdx)}
                     style={{
                       minHeight: '44px', padding: '4px 6px',
                       background: isToday ? 'rgba(59, 130, 246, 0.04)' : 'var(--bg-secondary)',
-                      border: '1px solid var(--border)', cursor: 'pointer',
+                      border: '1px solid var(--border)', cursor: canEdit ? 'pointer' : 'default',
                       transition: 'background 0.1s', position: 'relative',
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                    onMouseEnter={e => { if (canEdit) e.currentTarget.style.background = 'var(--bg-hover)' }}
                     onMouseLeave={e => e.currentTarget.style.background = isToday ? 'rgba(59, 130, 246, 0.04)' : 'var(--bg-secondary)'}
                   >
                     {cellEntries.length === 0 && (
@@ -198,13 +203,15 @@ export default function Schedule() {
                         <span style={{ color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                           {entry.contactName.replace(/^FTSS\s*/i, '')}
                         </span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
-                          style={{
-                            background: 'none', border: 'none', color: 'var(--text-muted)',
-                            cursor: 'pointer', padding: '0 2px', fontSize: '12px', lineHeight: 1, flexShrink: 0,
-                          }}
-                        >&times;</button>
+                        {canEdit && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
+                            style={{
+                              background: 'none', border: 'none', color: 'var(--text-muted)',
+                              cursor: 'pointer', padding: '0 2px', fontSize: '12px', lineHeight: 1, flexShrink: 0,
+                            }}
+                          >&times;</button>
+                        )}
                       </div>
                     ))}
                   </div>

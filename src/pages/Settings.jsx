@@ -1,12 +1,26 @@
 import { useState } from 'react'
 import { useSettings } from '../contexts/SettingsContext'
-import { Save, Building2, User } from 'lucide-react'
+import { Save, Building2, User, Palette, Lock } from 'lucide-react'
+
+const ACCENT_PRESETS = [
+  { label: 'Blue', value: '#3b82f6' },
+  { label: 'Purple', value: '#8b5cf6' },
+  { label: 'Green', value: '#22c55e' },
+  { label: 'Orange', value: '#f97316' },
+  { label: 'Red', value: '#ef4444' },
+  { label: 'Teal', value: '#14b8a6' },
+  { label: 'Pink', value: '#ec4899' },
+]
 
 export default function Settings() {
   const { settings, updateSettings } = useSettings()
   const [companyName, setCompanyName] = useState(settings.companyName)
   const [logoInitials, setLogoInitials] = useState(settings.logoInitials)
   const [dispatcherName, setDispatcherName] = useState(settings.dispatcherName)
+  const [accentColor, setAccentColor] = useState(settings.accentColor)
+  const [dashboardSubtitle, setDashboardSubtitle] = useState(settings.dashboardSubtitle)
+  const [greetingOverride, setGreetingOverride] = useState(settings.greetingOverride)
+  const [scheduleEditEnabled, setScheduleEditEnabled] = useState(settings.scheduleEditEnabled)
   const [saved, setSaved] = useState(false)
 
   const handleSave = (e) => {
@@ -15,6 +29,10 @@ export default function Settings() {
       companyName: companyName.trim() || 'FTSS Services LLC',
       logoInitials: logoInitials.trim().toUpperCase().slice(0, 2) || 'FT',
       dispatcherName: dispatcherName.trim() || 'Dispatcher',
+      accentColor,
+      dashboardSubtitle: dashboardSubtitle.trim() || 'Dispatch Dashboard',
+      greetingOverride: greetingOverride.trim(),
+      scheduleEditEnabled,
     })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -28,19 +46,25 @@ export default function Settings() {
       <div className="page-body" style={{ maxWidth: '560px' }}>
         <form onSubmit={handleSave}>
           <div className="card" style={{ marginBottom: '20px' }}>
-            <div className="card-header"><h3>Company</h3></div>
+            <div className="card-header"><h3><Building2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />Company</h3></div>
             <div className="card-body">
               <div className="form-group">
                 <label>Company Name</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Building2 size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                  <input
-                    type="text"
-                    value={companyName}
-                    onChange={e => setCompanyName(e.target.value)}
-                    placeholder="FTSS Services LLC"
-                  />
-                </div>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={e => setCompanyName(e.target.value)}
+                  placeholder="FTSS Services LLC"
+                />
+              </div>
+              <div className="form-group">
+                <label>Dashboard Subtitle</label>
+                <input
+                  type="text"
+                  value={dashboardSubtitle}
+                  onChange={e => setDashboardSubtitle(e.target.value)}
+                  placeholder="Dispatch Dashboard"
+                />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>Logo Initials</label>
@@ -63,19 +87,75 @@ export default function Settings() {
           </div>
 
           <div className="card" style={{ marginBottom: '20px' }}>
-            <div className="card-header"><h3>Dispatcher</h3></div>
+            <div className="card-header"><h3><User size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />Dispatcher</h3></div>
+            <div className="card-body">
+              <div className="form-group">
+                <label>Display Name</label>
+                <input
+                  type="text"
+                  value={dispatcherName}
+                  onChange={e => setDispatcherName(e.target.value)}
+                  placeholder="Dispatcher"
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Custom Greeting (optional)</label>
+                <input
+                  type="text"
+                  value={greetingOverride}
+                  onChange={e => setGreetingOverride(e.target.value)}
+                  placeholder="e.g. Welcome back, or leave blank for time-based greeting"
+                />
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                  If set, this replaces the "Good morning/afternoon/evening" greeting on the dashboard.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="card" style={{ marginBottom: '20px' }}>
+            <div className="card-header"><h3><Palette size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />Appearance</h3></div>
             <div className="card-body">
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Display Name</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <User size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                  <input
-                    type="text"
-                    value={dispatcherName}
-                    onChange={e => setDispatcherName(e.target.value)}
-                    placeholder="Dispatcher"
-                  />
+                <label>Accent Color</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {ACCENT_PRESETS.map(preset => (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      onClick={() => setAccentColor(preset.value)}
+                      style={{
+                        width: '36px', height: '36px', borderRadius: '8px',
+                        background: preset.value, border: accentColor === preset.value ? '3px solid var(--text-primary)' : '3px solid transparent',
+                        cursor: 'pointer', transition: 'border-color 0.15s',
+                      }}
+                      title={preset.label}
+                    />
+                  ))}
                 </div>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', display: 'block' }}>
+                  Selected: {accentColor}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="card" style={{ marginBottom: '20px' }}>
+            <div className="card-header"><h3><Lock size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />Permissions</h3></div>
+            <div className="card-body">
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={scheduleEditEnabled}
+                    onChange={e => setScheduleEditEnabled(e.target.checked)}
+                    style={{ width: '18px', height: '18px', accentColor: accentColor }}
+                  />
+                  Allow schedule editing
+                </label>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '28px', display: 'block' }}>
+                  When disabled, the schedule is view-only for everyone.
+                </span>
               </div>
             </div>
           </div>

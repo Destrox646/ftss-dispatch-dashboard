@@ -6,6 +6,10 @@ const DEFAULTS = {
   companyName: 'FTSS Services LLC',
   logoInitials: 'FT',
   dispatcherName: 'Dispatcher',
+  accentColor: '#3b82f6',
+  dashboardSubtitle: 'Dispatch Dashboard',
+  greetingOverride: '',
+  scheduleEditEnabled: false,
 }
 
 function loadSettings() {
