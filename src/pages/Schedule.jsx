@@ -155,8 +155,11 @@ export default function Schedule() {
           if (!cell) continue
           const names = cell.split(',').map(n => n.trim()).filter(Boolean)
           for (const name of names) {
-            const fullName = 'FTSS ' + name
-            const contact = ftssContacts.find(c => c.name.toLowerCase() === fullName.toLowerCase())
+            const lower = name.toLowerCase()
+            // Try exact match first, then partial
+            let contact = ftssContacts.find(c => c.name.toLowerCase() === ('ftss ' + lower))
+            if (!contact) contact = ftssContacts.find(c => c.name.toLowerCase().includes(lower))
+            if (!contact) contact = contacts.find(c => c.name.toLowerCase().includes(lower))
             if (!contact) continue
             const dateStr = format(weekDates[dayIdx], 'yyyy-MM-dd')
             addScheduleEntry({
