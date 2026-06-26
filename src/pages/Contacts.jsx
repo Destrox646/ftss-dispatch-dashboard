@@ -1,15 +1,18 @@
 import { useState, useMemo, useRef } from 'react'
-import { Search, Phone, Mail, Building2, User, Camera } from 'lucide-react'
-import { contacts } from '../data/contacts'
+import { Search, Phone, Mail, Building2, Camera, Plus, X } from 'lucide-react'
 import { useContactAvatars } from '../hooks/useContactAvatars'
+import { useContacts } from '../hooks/useContacts'
 
 export default function Contacts() {
   const [search, setSearch] = useState('')
-  const { avatars, setAvatar, removeAvatar } = useContactAvatars()
+  const { avatars, setAvatar } = useContactAvatars()
+  const { ftssContacts, addContact } = useContacts()
   const avatarInputRef = useRef(null)
   const [editingContactId, setEditingContactId] = useState(null)
-
-  const ftssContacts = useMemo(() => contacts.filter(c => c.name.toUpperCase().startsWith('FTSS')), [])
+  const [showAdd, setShowAdd] = useState(false)
+  const [addName, setAddName] = useState('')
+  const [addPhone, setAddPhone] = useState('')
+  const [addEmail, setAddEmail] = useState('')
 
   const filtered = useMemo(() => {
     if (!search.trim()) return ftssContacts.slice(0, 50)
@@ -27,6 +30,34 @@ export default function Contacts() {
   }
 
   const avatarColors = ['avatar-blue', 'avatar-green', 'avatar-orange', 'avatar-purple', 'avatar-red']
+
+  const formatPhone = (v) => {
+    const d = v.replace(/\D/g, '')
+    if (d.length <= 3) return d
+    if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`
+    return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6, 10)}`
+  }
+
+  const handleAddContact = (e) => {
+    e.preventDefault()
+    const raw = addName.trim()
+    if (!raw) return
+    const name = raw.toUpperCase().startsWith('FTSS') ? raw : 'FTSS ' + raw
+    const digits = addPhone.replace(/\D/g, '')
+    addContact({
+      id: 'custom-' + Date.now(),
+      firstName: name,
+      lastName: '',
+      name,
+      email: addEmail.trim(),
+      phones: digits.length >= 10 ? [{ label: 'Mobile', number: formatPhone(digits) }] : [],
+      organization: '',
+    })
+    setAddName('')
+    setAddPhone('')
+    setAddEmail('')
+    setShowAdd(false)
+  }
 
   const handleAvatarFileChange = (e) => {
     const file = e.target.files?.[0]
@@ -48,6 +79,9 @@ export default function Contacts() {
             <h2>Contacts</h2>
             <p>{ftssContacts.length.toLocaleString()} FTSS contacts</p>
           </div>
+          <button className="btn btn-primary" onClick={() => setShowAdd(true)} style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
+            <Plus size={16} /> Add Contact
+          </button>
         </div>
       </div>
       <div className="page-body">
@@ -164,6 +198,39 @@ export default function Contacts() {
           style={{ display: 'none' }}
         />
       </div>
+
+      {/* Add Contact Modal */}
+      {showAdd && (
+        <div className="modal-overlay" onClick={() => setShowAdd(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+            <div className="modal-header">
+              <h3>Add FTSS Contact</h3>
+              <button className="modal-close" onClick={() => setShowAdd(false)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleAddContact}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Name <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(FTSS prefix auto-added)</span></label>
+                  <input type="text" value={addName} onChange={e => setAddName(e.target.value)} placeholder="A Tontillo" autoFocus />
+                </div>
+                <div className="form-group">
+                  <label>Phone</label>
+                  <input type="tel" value={addPhone} onChange={e => setAddPhone(formatPhone(e.target.value))} placeholder="(555) 123-4567" maxLength={14} />
+                </div>
+                <div className="form-group">
+                  <label>Email</label>
+                  <input type="email" value={addEmail} onChange={e => setAddEmail(e.target.value)} placeholder="optional" />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-ghost" onClick={() => setShowAdd(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Add Contact</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <style>{`
         .avatar:hover .avatar-overlay { opacity: 1 !important; }
       `}</style>

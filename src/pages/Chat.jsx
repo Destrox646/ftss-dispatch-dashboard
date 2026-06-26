@@ -1,27 +1,17 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { Send, Hash, Users, ChevronDown, ChevronRight, Radio, X, Search, CheckCircle } from 'lucide-react'
 import { format } from 'date-fns'
-import { contacts } from '../data/contacts'
 import { useChatMessages, sendMessage } from '../hooks/useFirestore'
 import { useAuth } from '../contexts/AuthContext'
 import { httpsCallable } from 'firebase/functions'
 import { functions } from '../firebase'
 import { useContactAvatars } from '../hooks/useContactAvatars'
-
-const ftssContacts = contacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
+import { useContacts } from '../hooks/useContacts'
 
 const defaultChannels = [
   { id: 'general', name: 'General', type: 'channel' },
   { id: 'dispatch', name: 'Dispatch', type: 'channel' },
 ]
-
-const ftssGroup = {
-  id: 'ftss',
-  name: 'FTSS',
-  type: 'group',
-  members: ftssContacts,
-  memberCount: ftssContacts.length,
-}
 
 export default function Chat() {
   const { user } = useAuth()
@@ -39,6 +29,8 @@ export default function Chat() {
   const [broadcastSending, setBroadcastSending] = useState(false)
   const [broadcastResult, setBroadcastResult] = useState(null)
   const { avatars } = useContactAvatars()
+  const { allContacts, ftssContacts } = useContacts()
+  const ftssGroup = { id: 'ftss', name: 'FTSS', type: 'group', members: ftssContacts, memberCount: ftssContacts.length }
   const messagesEndRef = useRef(null)
 
   useEffect(() => {

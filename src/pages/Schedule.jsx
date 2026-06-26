@@ -2,11 +2,9 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, X, ChevronLeft, ChevronRight, Search, Users, Download, Upload } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
-import { contacts } from '../data/contacts'
 import { useScheduleEntries, useScheduleLabels, addScheduleEntry, deleteScheduleEntry } from '../hooks/useFirestore'
 import { useSettings } from '../contexts/SettingsContext'
-
-const ftssContacts = contacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
+import { useContacts } from '../hooks/useContacts'
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 const defaultLabels = [
@@ -18,6 +16,7 @@ export default function Schedule() {
   const { data: entries } = useScheduleEntries()
   const { labels: savedLabels, saveLabels } = useScheduleLabels()
   const { settings } = useSettings()
+  const { allContacts, ftssContacts } = useContacts()
   const canEdit = settings.scheduleEditEnabled
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [modalCell, setModalCell] = useState(null)
@@ -43,7 +42,7 @@ export default function Schedule() {
   )
 
   const filteredContacts = useMemo(() => {
-    const pool = showAllContacts ? contacts : ftssContacts
+    const pool = showAllContacts ? allContacts : ftssContacts
     if (!search.trim()) return pool.slice(0, 30)
     const q = search.toLowerCase()
     return pool.filter(c =>
