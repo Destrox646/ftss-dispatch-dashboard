@@ -16,6 +16,16 @@ const defaultChannels = [
 export default function Chat() {
   const { user } = useAuth()
   const { data: messages } = useChatMessages()
+  const { avatars } = useContactAvatars()
+  const { ftssContacts } = useContacts()
+  const currentUserId = user?.userId || user?.uid || user?.phone || 'user'
+  const currentUserName = user?.name || user?.email?.split('@')[0] || user?.phone || 'User'
+  const currentUserAvatar = currentUserName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase())
+    .join('') || 'U'
   const [input, setInput] = useState('')
   const [activeChannel, setActiveChannel] = useState('general')
   const [showMembers, setShowMembers] = useState(false)
@@ -24,18 +34,20 @@ export default function Chat() {
   const [broadcastOpen, setBroadcastOpen] = useState(false)
   const [broadcastMsg, setBroadcastMsg] = useState('')
   const [broadcastSearch, setBroadcastSearch] = useState('')
-  const [selectedRecipients, setSelectedRecipients] = useState(new Set(ftssContacts.map(c => c.id)))
+  const [selectedRecipients, setSelectedRecipients] = useState(() => new Set())
   const [broadcastSent, setBroadcastSent] = useState(false)
   const [broadcastSending, setBroadcastSending] = useState(false)
   const [broadcastResult, setBroadcastResult] = useState(null)
-  const { avatars } = useContactAvatars()
-  const { allContacts, ftssContacts } = useContacts()
   const ftssGroup = { id: 'ftss', name: 'FTSS', type: 'group', members: ftssContacts, memberCount: ftssContacts.length }
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    setSelectedRecipients(new Set(ftssContacts.map(c => c.id)))
+  }, [ftssContacts])
 
   const channelMessages = useMemo(() =>
     messages.filter(m => m.channel === activeChannel),
@@ -51,9 +63,9 @@ export default function Chat() {
     if (!input.trim()) return
 
     await sendMessage({
-      senderId: user.uid,
-      senderName: user.email.split('@')[0],
-      senderAvatar: user.email[0].toUpperCase() + user.email[1].toUpperCase(),
+      senderId: currentUserId,
+      senderName: currentUserName,
+      senderAvatar: currentUserAvatar,
       text: input.trim(),
       channel: activeChannel,
     })
@@ -203,7 +215,7 @@ export default function Chat() {
                 </div>
               )}
               {channelMessages.map((msg, i) => {
-                const isMe = msg.senderId === user.uid
+                const isMe = msg.senderId === currentUserId
                 const showAvatar = i === 0 || channelMessages[i - 1].senderId !== msg.senderId
 
                 return (
@@ -212,7 +224,7 @@ export default function Chat() {
                     marginTop: showAvatar ? '20px' : '4px',
                     justifyContent: isMe ? 'flex-end' : 'flex-start',
                   }}>
-                    {!isMe && showAvatar && renderAvatar(msg.senderName, msg.senderAvatar, '36px', { marginTop: '2px' })}
+                    {!isMe && showAvatar && renderAvatar(msg.senderName, msg.senderAvatar, '36px', undefined, { marginTop: '2px' })}
                     {!isMe && !showAvatar && <div style={{ width: '36px', flexShrink: 0 }} />}
                     <div style={{ maxWidth: '65%', minWidth: '80px' }}>
                       {showAvatar && !isMe && (
@@ -236,7 +248,7 @@ export default function Chat() {
                         </div>
                       )}
                     </div>
-                    {isMe && showAvatar && renderAvatar(msg.senderName, msg.senderAvatar, '36px', { marginTop: '2px' }, 'avatar-purple')}
+                    {isMe && showAvatar && renderAvatar(msg.senderName, msg.senderAvatar, '36px', 'avatar-purple', { marginTop: '2px' })}
                     {isMe && !showAvatar && <div style={{ width: '36px', flexShrink: 0 }} />}
                   </div>
                 )
@@ -316,9 +328,9 @@ export default function Chat() {
                 setBroadcastSending(true)
                 // Send in-app chat message
                 await sendMessage({
-                  senderId: user.uid,
-                  senderName: user.email.split('@')[0],
-                  senderAvatar: user.email[0].toUpperCase() + user.email[1].toUpperCase(),
+                  senderId: currentUserId,
+                  senderName: currentUserName,
+                  senderAvatar: currentUserAvatar,
                   text: broadcastMsg.trim(),
                   channel: 'ftss',
                   broadcast: true,
@@ -378,7 +390,6 @@ export default function Chat() {
                       }).map(c => {
                         const checked = selectedRecipients.has(c.id)
                         const initials = (c.firstName[0] || '') + (c.lastName[0] || '')
-                        const colors = ['avatar-blue', 'avatar-green', 'avatar-orange', 'avatar-purple', 'avatar-red']
                         return (
                           <label key={c.id} style={{
                             display: 'flex', alignItems: 'center', gap: '10px',
