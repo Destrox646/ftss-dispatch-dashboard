@@ -33,7 +33,7 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: linear-gradient(rgba(15, 17, 23, 0.82), rgba(15, 17, 23, 0.82)), url('/pic145.PNG') center / cover fixed no-repeat;
+  background: linear-gradient(rgba(15, 17, 23, 0.53), rgba(15, 17, 23, 0.53)), url('/pic145.PNG') center / cover fixed no-repeat;
   color: var(--text-primary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
