@@ -8,6 +8,7 @@ import { useContacts } from '../hooks/useContacts'
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 const defaultLabels = [
+  'RXO Minooka 1', 'JB Hunt Milwaukee 1', 'JB Hunt Milwaukee 2', 'JB Hunt Lowes Appleton 1', 'JB Hunt Lowes Appleton 2', 'JB Hunt Lowes Appleton 3', 'JB Hunt Lowes Appleton 4', 'JB Hunt Detroit 1', 'RXO Grand Rapids 1', 'JB Hunt Des Moines 1', 'Request offs', 'Notes',
   'RXO Milwaukee 1', 'RXO Milwaukee 2', 'JB Hunt Appleton 1', 'JB Hunt Appleton 2', 'JB Hunt Appleton 3', 'JB Hunt Appleton 4', 'JB Hunt Waukesha 1',
   'JB Hunt Waukesha 2', 'JB Hunt Detroit 1', 'RXO Grand Rapids 1', 'JB Hunt Des Moines 1', 'Request offs 1', 'Request offs 2', 'Notes 1', 'Notes 2',
 ]
@@ -153,32 +154,95 @@ export default function Schedule() {
     const reader = new FileReader()
     reader.onload = () => {
       const rows = parseCSV(reader.result)
-      if (rows.length < 2) return
+      if (rows.length < 3) return
       const currentLabels = rowLabels.map(l => l.toLowerCase().trim())
-      for (let r = 1; r < rows.length; r++) {
-        const cells = rows[r]
-        const label = (cells[0] || '').toLowerCase().trim()
-        const rowIdx = currentLabels.indexOf(label)
-        if (rowIdx === -1) continue
-        for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
-          const cell = (cells[dayIdx + 1] || '').trim()
-          if (!cell) continue
-          const names = cell.split(',').map(n => n.trim()).filter(Boolean)
-          for (const name of names) {
-            const lower = name.toLowerCase()
-            // Try exact match first, then partial
-            let contact = ftssContacts.find(c => c.name.toLowerCase() === ('ftss ' + lower))
-            if (!contact) contact = ftssContacts.find(c => c.name.toLowerCase().includes(lower))
-            if (!contact) continue
-            const dateStr = format(weekDates[dayIdx], 'yyyy-MM-dd')
-            addScheduleEntry({
-              date: dateStr,
-              row: rowIdx,
-              contactId: contact.id,
-              contactName: contact.name,
-              phone: contact.phones[0]?.number || '',
-              note: '',
-            })
+
+      // Detect interleaved format: row 2 has Driver/Helper alternating
+      const headerRow = rows[2] || []
+      const isInterleaved = headerRow[1]?.toLowerCase() === 'driver' && headerRow[2]?.toLowerCase() === 'helper'
+
+      if (isInterleaved) {
+        // Parse dates from row 0: e.g. "6/29/2026",,"6/30/2026",...
+        const csvDates = []
+        for (let c = 1; c < rows[0].length && csvDates.length < 7; c += 2) {
+          const dateStr = (rows[0][c] || '').trim()
+          if (!dateStr) continue
+          const parts = dateStr.split('/')
+          if (parts.length === 3) {
+            const m = parts[0].padStart(2, '0')
+            const d = parts[1].padStart(2, '0')
+            const y = parts[2]
+            csvDates.push(`${y}-${m}-${d}`)
+          }
+        }
+
+        // Set weekStart to match the CSV week
+        if (csvDates.length > 0) {
+          const [y, m, d] = csvDates[0].split('-').map(Number)
+          setWeekStart(new Date(y, m - 1, d))
+        }
+
+        // Parse data rows (row 3+)
+        for (let r = 3; r < rows.length; r++) {
+          const cells = rows[r]
+          const label = (cells[0] || '').toLowerCase().trim()
+          const rowIdx = currentLabels.indexOf(label)
+          if (rowIdx === -1) continue
+
+          for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+            const dateStr = csvDates[dayIdx]
+            if (!dateStr) continue
+            const driverCell = (cells[1 + dayIdx * 2] || '').trim()
+            const helperCell = (cells[2 + dayIdx * 2] || '').trim()
+
+            for (const [role, cell] of [['driver', driverCell], ['helper', helperCell]]) {
+              if (!cell) continue
+              const names = cell.split(',').map(n => n.trim()).filter(Boolean)
+              for (const name of names) {
+                const lower = name.toLowerCase()
+                let contact = ftssContacts.find(c => c.name.toLowerCase() === ('ftss ' + lower))
+                if (!contact) contact = ftssContacts.find(c => c.name.toLowerCase().includes(lower))
+                if (!contact) contact = ftssContacts.find(c => c.name.toLowerCase().replace(/^ftss\s*/i, '') === lower)
+                if (!contact) continue
+                addScheduleEntry({
+                  date: dateStr,
+                  row: rowIdx,
+                  role,
+                  contactId: contact.id,
+                  contactName: contact.name,
+                  phone: contact.phones[0]?.number || '',
+                  note: '',
+                })
+              }
+            }
+          }
+        }
+      } else {
+        // Original format: one row per role per route
+        for (let r = 1; r < rows.length; r++) {
+          const cells = rows[r]
+          const label = (cells[0] || '').toLowerCase().trim()
+          const rowIdx = currentLabels.indexOf(label)
+          if (rowIdx === -1) continue
+          for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+            const cell = (cells[dayIdx + 1] || '').trim()
+            if (!cell) continue
+            const names = cell.split(',').map(n => n.trim()).filter(Boolean)
+            for (const name of names) {
+              const lower = name.toLowerCase()
+              let contact = ftssContacts.find(c => c.name.toLowerCase() === ('ftss ' + lower))
+              if (!contact) contact = ftssContacts.find(c => c.name.toLowerCase().includes(lower))
+              if (!contact) continue
+              const dateStr = format(weekDates[dayIdx], 'yyyy-MM-dd')
+              addScheduleEntry({
+                date: dateStr,
+                row: rowIdx,
+                contactId: contact.id,
+                contactName: contact.name,
+                phone: contact.phones[0]?.number || '',
+                note: '',
+              })
+            }
           }
         }
       }
