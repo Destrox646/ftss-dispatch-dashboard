@@ -76,9 +76,23 @@ export default function Schedule() {
     ).slice(0, 30)
   }, [search, showAllContacts, allContacts, ftssContacts])
 
+  // Memoize entry lookup map: "date-row-role" → entries[]
+  const entryMap = useMemo(() => {
+    const map = {}
+    for (const entry of entries) {
+      const key = `${entry.date}-${entry.row}-${entry.role || 'driver'}`
+      if (!map[key]) map[key] = []
+      map[key].push(entry)
+    }
+    return map
+  }, [entries])
+
   const getEntries = (dayIdx, rowIdx, role) => {
     const dateStr = format(weekDates[dayIdx], 'yyyy-MM-dd')
-    return entries.filter(e => e.date === dateStr && e.row === rowIdx && (role ? (e.role || 'driver') === role : true))
+    if (role) return entryMap[`${dateStr}-${rowIdx}-${role}`] || []
+    const driver = entryMap[`${dateStr}-${rowIdx}-driver`] || []
+    const helper = entryMap[`${dateStr}-${rowIdx}-helper`] || []
+    return [...driver, ...helper]
   }
 
   const handleCellClick = (dayIdx, rowIdx, role) => {
