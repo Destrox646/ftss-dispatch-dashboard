@@ -1,23 +1,34 @@
 import { useState, useMemo, useRef } from 'react'
-import { Search, Phone, Mail, Building2, Camera, Plus, X } from 'lucide-react'
+import { Search, Phone, Mail, Building2, Camera, Plus, X, Pencil, Trash2 } from 'lucide-react'
 import { useContactAvatars } from '../hooks/useContactAvatars'
 import { useContacts } from '../hooks/useContacts'
+import { useAuth } from '../contexts/AuthContext'
+
+const ADMIN_PHONE = '+12623272419'
 
 export default function Contacts() {
   const [search, setSearch] = useState('')
   const { avatars, setAvatar } = useContactAvatars()
-  const { ftssContacts, addContact } = useContacts()
+  const { ftssContacts, addContact, editContact, deleteContact } = useContacts()
+  const { user } = useAuth()
+  const isAdmin = user?.phone === ADMIN_PHONE
   const avatarInputRef = useRef(null)
   const [editingContactId, setEditingContactId] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
   const [addName, setAddName] = useState('')
   const [addPhone, setAddPhone] = useState('')
   const [addEmail, setAddEmail] = useState('')
+  const [editModal, setEditModal] = useState(null)
+  const [editName, setEditName] = useState('')
+  const [editPhone, setEditPhone] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [editOrg, setEditOrg] = useState('')
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return ftssContacts.slice(0, 50)
+    const visible = ftssContacts.filter(c => !c._deleted)
+    if (!search.trim()) return visible.slice(0, 50)
     const q = search.toLowerCase()
-    return ftssContacts.filter(c =>
+    return visible.filter(c =>
       c.name.toLowerCase().includes(q) ||
       c.email.toLowerCase().includes(q) ||
       c.organization.toLowerCase().includes(q) ||
@@ -57,6 +68,34 @@ export default function Contacts() {
     setAddPhone('')
     setAddEmail('')
     setShowAdd(false)
+  }
+
+  const openEdit = (c) => {
+    setEditModal(c)
+    setEditName(c.name || '')
+    setEditPhone(c.phones?.[0]?.number || '')
+    setEditEmail(c.email || '')
+    setEditOrg(c.organization || '')
+  }
+
+  const handleEditContact = (e) => {
+    e.preventDefault()
+    if (!editModal) return
+    const digits = editPhone.replace(/\D/g, '')
+    editContact(editModal.id, {
+      name: editName.trim(),
+      firstName: editName.trim(),
+      lastName: '',
+      email: editEmail.trim(),
+      phones: digits.length >= 10 ? [{ label: 'Mobile', number: formatPhone(digits) }] : editModal.phones || [],
+      organization: editOrg.trim(),
+    })
+    setEditModal(null)
+  }
+
+  const handleDeleteContact = (c) => {
+    if (!confirm(`Delete ${c.name}?`)) return
+    deleteContact(c.id)
   }
 
   const handleAvatarFileChange = (e) => {
@@ -117,6 +156,7 @@ export default function Contacts() {
                   <th>Phone</th>
                   <th>Email</th>
                   <th>Organization</th>
+                  {isAdmin && <th style={{ width: '80px' }}></th>}
                 </tr>
               </thead>
               <tbody>
@@ -181,6 +221,18 @@ export default function Contacts() {
                         <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
                       )}
                     </td>
+                    {isAdmin && (
+                      <td>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)} title="Edit">
+                            <Pencil size={14} />
+                          </button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteContact(c)} title="Delete" style={{ color: 'var(--danger, #ef4444)' }}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {filtered.length === 0 && (
@@ -225,6 +277,42 @@ export default function Contacts() {
               <div className="modal-footer">
                 <button type="button" className="btn btn-ghost" onClick={() => setShowAdd(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary">Add Contact</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Contact Modal */}
+      {editModal && (
+        <div className="modal-overlay" onClick={() => setEditModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+            <div className="modal-header">
+              <h3>Edit Contact</h3>
+              <button className="modal-close" onClick={() => setEditModal(null)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleEditContact}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Name</label>
+                  <input type="text" value={editName} onChange={e => setEditName(e.target.value)} autoFocus />
+                </div>
+                <div className="form-group">
+                  <label>Phone</label>
+                  <input type="tel" value={editPhone} onChange={e => setEditPhone(formatPhone(e.target.value))} placeholder="(555) 123-4567" maxLength={14} />
+                </div>
+                <div className="form-group">
+                  <label>Email</label>
+                  <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Organization</label>
+                  <input type="text" value={editOrg} onChange={e => setEditOrg(e.target.value)} />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-ghost" onClick={() => setEditModal(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Changes</button>
               </div>
             </form>
           </div>
