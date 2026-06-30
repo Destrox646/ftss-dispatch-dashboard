@@ -95,7 +95,7 @@ export default function Schedule() {
   }
 
   const getInitials = (name) => {
-    const parts = name.replace(/^FTSS\s*/i, '').split(' ')
+    const parts = name.split(' ')
     if (parts.length >= 2) return `${(parts[0][0] || '').toUpperCase()}${(parts[1][0] || '').toUpperCase()}`
     return (parts[0] || '').substring(0, 2).toUpperCase()
   }
@@ -107,10 +107,10 @@ export default function Schedule() {
     const rows = []
     rowLabels.forEach((label, rowIdx) => {
       rows.push([`${label} Driver`, ...DAYS.map((_, dayIdx) => {
-        return getEntries(dayIdx, rowIdx, 'driver').map(e => e.contactName.replace(/^FTSS\s*/i, '')).join(', ')
+        return getEntries(dayIdx, rowIdx, 'driver').map(e => e.contactName).join(', ')
       })])
       rows.push([`${label} Helper`, ...DAYS.map((_, dayIdx) => {
-        return getEntries(dayIdx, rowIdx, 'helper').map(e => e.contactName.replace(/^FTSS\s*/i, '')).join(', ')
+        return getEntries(dayIdx, rowIdx, 'helper').map(e => e.contactName).join(', ')
       })])
     })
     const csv = [header, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
@@ -293,7 +293,7 @@ export default function Schedule() {
               return (
                 <div key={day} style={{
                   padding: '10px 12px', textAlign: 'center',
-                  background: 'var(--bg-tertiary)',
+                  background: isToday ? 'rgba(59, 130, 246, 0.10)' : 'var(--bg-tertiary)',
                   borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0',
                   border: isToday ? '1px solid var(--accent)' : '1px solid transparent',
                   borderBottom: 'none',
@@ -334,7 +334,7 @@ export default function Schedule() {
                 const driverEntries = getEntries(dayIdx, rowIdx, 'driver')
                 const helperEntries = getEntries(dayIdx, rowIdx, 'helper')
                 const isToday = format(weekDates[dayIdx], 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-                const cellBg = isToday ? 'rgba(59, 130, 246, 0.04)' : 'var(--bg-secondary)'
+                const cellBg = isToday ? 'rgba(59, 130, 246, 0.10)' : 'var(--bg-secondary)'
                 const renderEntry = (entry) => (
                   <div key={entry.id} style={{
                     background: 'var(--accent-light)', border: '1px solid rgba(59, 130, 246, 0.3)',
@@ -345,7 +345,7 @@ export default function Schedule() {
                       {getInitials(entry.contactName)}
                     </div>
                     <span style={{ color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                      {entry.contactName.replace(/^FTSS\s*/i, '')}
+                      {entry.contactName}
                     </span>
                     {canEdit && (
                       <button onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
@@ -462,7 +462,7 @@ export default function Schedule() {
                     maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis',
                     textAlign: 'center',
                   }}>
-                    {entry.contactName.replace(/^FTSS\s*/i, '')}
+                    {entry.contactName}
                   </div>
                 </div>
               )
@@ -548,7 +548,7 @@ export default function Schedule() {
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                              {showAllContacts ? c.name : c.name.replace(/^FTSS\s*/i, '')}
+                              {c.name}
                             </div>
                             {c.phones[0] && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{c.phones[0].number}</div>}
                           </div>
@@ -571,7 +571,7 @@ export default function Schedule() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                          {showAllContacts ? selectedContact.name : selectedContact.name.replace(/^FTSS\s*/i, '')}
+                          {selectedContact.name}
                         </div>
                         {selectedContact.phones[0] && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{selectedContact.phones[0].number}</div>}
                       </div>

@@ -1,14 +1,12 @@
 import { useMemo } from 'react'
 import { Calendar, Users, MessageSquare, ChevronRight } from 'lucide-react'
 import { format, startOfWeek, addDays, isToday } from 'date-fns'
-import { contacts } from '../data/contacts'
+import { useContacts } from '../hooks/useContacts'
 import { useAuth } from '../contexts/AuthContext'
 import { useSettings } from '../contexts/SettingsContext'
 import { useChatMessages } from '../hooks/useFirestore'
 import { useScheduleEntries } from '../hooks/useFirestore'
 import { useTimeOffRequests } from '../hooks/useFirestore'
-
-const ftssContacts = contacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
 
 const QUICK_LINKS = [
   { label: 'View Schedule', path: '/schedule', icon: Calendar, color: 'var(--accent)' },
@@ -19,6 +17,7 @@ const QUICK_LINKS = [
 export default function Dashboard() {
   const { user } = useAuth()
   const { settings } = useSettings()
+  const { ftssContacts } = useContacts()
   const { data: messages } = useChatMessages()
   const { data: entries } = useScheduleEntries()
   const { data: requests } = useTimeOffRequests()

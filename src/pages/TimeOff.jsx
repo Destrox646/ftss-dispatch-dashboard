@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
 import { Plus, X, Check, XIcon, Calendar, Search } from 'lucide-react'
 import { format, differenceInDays } from 'date-fns'
-import { contacts } from '../data/contacts'
+import { useContacts } from '../hooks/useContacts'
 import { useTimeOffRequests, addTimeOffRequest, updateTimeOffStatus } from '../hooks/useFirestore'
 
 export default function TimeOff() {
   const { data: requests } = useTimeOffRequests()
+  const { ftssContacts } = useContacts()
   const [showModal, setShowModal] = useState(false)
   const [tab, setTab] = useState('pending')
   const [search, setSearch] = useState('')
@@ -22,13 +23,13 @@ export default function TimeOff() {
   const deniedCount = requests.filter(r => r.status === 'denied').length
 
   const filteredContacts = useMemo(() => {
-    if (!search.trim()) return contacts.slice(0, 20)
+    if (!search.trim()) return ftssContacts.slice(0, 20)
     const q = search.toLowerCase()
-    return contacts.filter(c =>
+    return ftssContacts.filter(c =>
       c.name.toLowerCase().includes(q) ||
       c.phones.some(p => p.number.includes(q))
     ).slice(0, 20)
-  }, [search])
+  }, [search, ftssContacts])
 
   const getInitials = (name) => {
     const parts = name.split(' ')

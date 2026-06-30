@@ -92,7 +92,7 @@ export default function Chat() {
 
   const openQuickMessage = (contact = null) => {
     setQuickRecipient(contact)
-    setQuickSearch(contact ? contact.name.replace(/^FTSS\s*/i, '') : '')
+    setQuickSearch(contact ? contact.name : '')
     setQuickMsg('')
     setQuickSending(false)
     setQuickSent(false)
@@ -413,7 +413,7 @@ export default function Chat() {
                           <button
                             type="button"
                             key={c.id}
-                            onClick={() => { setQuickRecipient(c); setQuickSearch(c.name.replace(/^FTSS\s*/i, '')) }}
+                            onClick={() => { setQuickRecipient(c); setQuickSearch(c.name) }}
                             style={{
                               display: 'flex', alignItems: 'center', gap: '10px', width: '100%', textAlign: 'left',
                               padding: '9px 12px', cursor: 'pointer', border: 'none', borderBottom: '1px solid var(--border)',
@@ -422,7 +422,7 @@ export default function Chat() {
                           >
                             {renderAvatar(c.name, initials, '28px')}
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name.replace(/^FTSS\s*/i, '')}</div>
+                              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
                               <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{c.phones[0].number}</div>
                             </div>
                             {selected && <CheckCircle size={16} style={{ color: 'var(--accent)' }} />}
@@ -435,7 +435,7 @@ export default function Chat() {
                     </div>
                   </div>
                   <div className="form-group">
-                    <label>Message {quickRecipient ? `to ${quickRecipient.name.replace(/^FTSS\s*/i, '')}` : ''}</label>
+                    <label>Message {quickRecipient ? `to ${quickRecipient.name}` : ''}</label>
                     <textarea
                       placeholder="Type your message..."
                       value={quickMsg}
@@ -457,7 +457,7 @@ export default function Chat() {
                 <CheckCircle size={48} style={{ color: '#10b981', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>Message Sent</h3>
                 <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                  Sent to {quickRecipient?.name.replace(/^FTSS\s*/i, '')}
+                  Sent to {quickRecipient?.name}
                 </p>
                 {quickResult && (
                   <div style={{
