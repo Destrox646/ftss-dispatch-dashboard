@@ -384,7 +384,7 @@ export default function Schedule() {
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
                       {driverEntries.length === 0 && (
-                        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.15s' }} className="slot-hover-plus">
+                        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 1 }} className="slot-hover-plus">
                           <Plus size={14} style={{ color: 'var(--text-muted)' }} />
                         </div>
                       )}
@@ -401,7 +401,7 @@ export default function Schedule() {
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
                       {helperEntries.length === 0 && (
-                        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.15s' }} className="slot-hover-plus">
+                        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 1 }} className="slot-hover-plus">
                           <Plus size={14} style={{ color: 'var(--text-muted)' }} />
                         </div>
                       )}
@@ -600,7 +600,7 @@ export default function Schedule() {
         </div>
       )}
 
-      <style>{`.slot-hover-plus { } div:hover > .slot-hover-plus { opacity: 1 !important; }`}</style>
+      <style>{`.slot-hover-plus { opacity: 1 !important; }`}</style>
     </>
   )
 }
