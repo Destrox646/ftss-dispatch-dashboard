@@ -8,14 +8,29 @@ import { useContacts } from '../hooks/useContacts'
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 const defaultLabels = [
-  'RXO Minooka 1', 'JB Hunt Milwaukee 1', 'JB Hunt Milwaukee 2', 'JB Hunt Lowes Appleton 1', 'JB Hunt Lowes Appleton 2', 'JB Hunt Lowes Appleton 3', 'JB Hunt Lowes Appleton 4', 'JB Hunt Detroit 1', 'RXO Grand Rapids 1', 'JB Hunt Des Moines 1', 'Request offs', 'Notes',
-  'RXO Milwaukee 1', 'RXO Milwaukee 2', 'JB Hunt Appleton 1', 'JB Hunt Appleton 2', 'JB Hunt Appleton 3', 'JB Hunt Appleton 4', 'JB Hunt Waukesha 1',
-  'JB Hunt Waukesha 2', 'JB Hunt Detroit 1', 'RXO Grand Rapids 1', 'JB Hunt Des Moines 1', 'Request offs 1', 'Request offs 2', 'Notes 1', 'Notes 2',
+  'RXO Minooka 1',
+  'JB Hunt Milwaukee 1', 'JB Hunt Milwaukee 2',
+  'JB Hunt Lowes Appleton 1', 'JB Hunt Lowes Appleton 2', 'JB Hunt Lowes Appleton 3', 'JB Hunt Lowes Appleton 4',
+  'JB Hunt Detroit 1', 'RXO Grand Rapids 1', 'JB Hunt Des Moines 1',
+  'RXO Milwaukee 1', 'RXO Milwaukee 2',
+  'JB Hunt Appleton 1', 'JB Hunt Appleton 2', 'JB Hunt Appleton 3', 'JB Hunt Appleton 4',
+  'JB Hunt Waukesha 1', 'JB Hunt Waukesha 2',
+  'JB Hunt Detroit 2', 'RXO Grand Rapids 2',
+  'Request offs 1', 'Request offs 2',
+  'Notes 1', 'Notes 2',
 ]
 
+function hashName(str) {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0
+  }
+  return Math.abs(hash)
+}
+
 export default function Schedule() {
-  const { data: entries } = useScheduleEntries()
-  const { labels: savedLabels, saveLabels } = useScheduleLabels()
+  const { data: entries, loading: entriesLoading } = useScheduleEntries()
+  const { labels: savedLabels, loading: labelsLoading, saveLabels } = useScheduleLabels()
   const { user } = useAuth()
   const { allContacts, ftssContacts } = useContacts()
   const canEdit = user?.role === 'manager' || user?.role === 'supervisor'
@@ -33,7 +48,7 @@ export default function Schedule() {
   const fileInputRef = useRef(null)
 
   // Sync labels from Firestore
-  useMemo(() => {
+  useEffect(() => {
     if (savedLabels) setRowLabels(savedLabels)
   }, [savedLabels])
 
@@ -50,7 +65,7 @@ export default function Schedule() {
       c.name.toLowerCase().includes(q) ||
       c.phones.some(p => p.number.includes(q))
     ).slice(0, 30)
-  }, [search, showAllContacts])
+  }, [search, showAllContacts, allContacts, ftssContacts])
 
   const getEntries = (dayIdx, rowIdx, role) => {
     const dateStr = format(weekDates[dayIdx], 'yyyy-MM-dd')
@@ -88,7 +103,7 @@ export default function Schedule() {
   }
 
   const handleLabelChange = (rowIdx, value) => {
-    const next = [...(savedLabels || defaultLabels)]
+    const next = [...rowLabels]
     next[rowIdx] = value
     setRowLabels(next)
     saveLabels(next)
@@ -101,6 +116,7 @@ export default function Schedule() {
   }
 
   const avatarColors = ['avatar-blue', 'avatar-green', 'avatar-orange', 'avatar-purple', 'avatar-red']
+  const getAvatarColor = (name) => avatarColors[hashName(name) % avatarColors.length]
 
   const downloadCSV = () => {
     const header = ['Schedule', ...DAYS.map((day, i) => `${day} ${format(weekDates[i], 'M/d')}`)]
@@ -283,7 +299,12 @@ export default function Schedule() {
         </div>
       </div>
       <div className="page-body" style={{ overflowX: 'auto', padding: '20px 16px' }}>
-        <div style={{ minWidth: '900px' }}>
+        {(entriesLoading || labelsLoading) && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '14px', gap: '8px' }}>
+            <div className="spinner" /> Loading schedule...
+          </div>
+        )}
+        <div style={{ minWidth: '900px', opacity: (entriesLoading || labelsLoading) ? 0.4 : 1, transition: 'opacity 0.2s' }}>
           {/* Header row */}
           <div style={{ display: 'grid', gridTemplateColumns: '158px repeat(7, 1fr)', gap: '1px', marginBottom: '1px' }}>
             <div style={{ padding: '10px 8px' }} />
@@ -310,12 +331,12 @@ export default function Schedule() {
           </div>
 
           {/* Time rows */}
-          {defaultLabels.map((_, rowIdx) => (
+          {rowLabels.map((_, rowIdx) => (
             <div key={rowIdx} style={{ display: 'grid', gridTemplateColumns: '158px repeat(7, 1fr)', gap: '1px', marginBottom: '1px' }}>
               <div style={{
                 background: 'var(--bg-tertiary)',
                 border: '1px solid var(--border)',
-                display: 'flex', alignItems: 'center',
+                display: 'flex', flexDirection: 'column',
               }}>
                 <input
                   type="text"
@@ -324,36 +345,48 @@ export default function Schedule() {
                   readOnly={!canEdit}
                   style={{
                     width: '100%', background: 'transparent', border: 'none', outline: 'none',
-                    padding: '8px 10px', fontSize: '13px', fontWeight: 500,
+                    padding: '8px 10px 2px', fontSize: '13px', fontWeight: 500,
                     color: 'var(--text-primary)', fontFamily: 'inherit', textAlign: 'center',
                     cursor: canEdit ? 'text' : 'default',
                   }}
                 />
+                <div style={{ display: 'flex', borderTop: '1px solid var(--border)', flex: 1 }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid var(--border)', fontSize: '9px', color: 'var(--accent)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.7 }}>
+                    D
+                  </div>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: 'var(--green)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.7 }}>
+                    H
+                  </div>
+                </div>
               </div>
               {DAYS.map((_, dayIdx) => {
                 const driverEntries = getEntries(dayIdx, rowIdx, 'driver')
                 const helperEntries = getEntries(dayIdx, rowIdx, 'helper')
                 const isToday = format(weekDates[dayIdx], 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
                 const cellBg = isToday ? 'rgba(59, 130, 246, 0.10)' : 'var(--bg-secondary)'
-                const renderEntry = (entry) => (
-                  <div key={entry.id} style={{
-                    background: 'var(--accent-light)', border: '1px solid rgba(59, 130, 246, 0.3)',
-                    borderRadius: '4px', padding: '2px 5px',
-                    fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px',
-                  }} onClick={e => e.stopPropagation()}>
-                    <div className={`avatar ${avatarColors[entry.contactName.charCodeAt(4) % avatarColors.length]}`} style={{ width: '16px', height: '16px', fontSize: '6px', flexShrink: 0 }}>
-                      {getInitials(entry.contactName)}
+                const renderEntry = (entry, role) => {
+                  const isDriver = role === 'driver'
+                  return (
+                    <div key={entry.id} style={{
+                      background: isDriver ? 'rgba(59, 130, 246, 0.12)' : 'rgba(34, 197, 94, 0.12)',
+                      border: `1px solid ${isDriver ? 'rgba(59, 130, 246, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,
+                      borderRadius: '4px', padding: '2px 5px',
+                      fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px',
+                    }} onClick={e => e.stopPropagation()}>
+                      <div className={`avatar ${getAvatarColor(entry.contactName)}`} style={{ width: '16px', height: '16px', fontSize: '6px', flexShrink: 0 }}>
+                        {getInitials(entry.contactName)}
+                      </div>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                        {entry.contactName}
+                      </span>
+                      {canEdit && (
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0 1px', fontSize: '12px', lineHeight: 1, flexShrink: 0 }}
+                        >&times;</button>
+                      )}
                     </div>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                      {entry.contactName}
-                    </span>
-                    {canEdit && (
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
-                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0 1px', fontSize: '12px', lineHeight: 1, flexShrink: 0 }}
-                      >&times;</button>
-                    )}
-                  </div>
-                )
+                  )
+                }
                 return (
                   <div key={dayIdx} style={{
                     background: cellBg, border: '1px solid var(--border)',
@@ -379,16 +412,20 @@ export default function Schedule() {
                       style={{
                         flex: 1, minHeight: '28px', padding: '3px 4px', display: 'flex', flexWrap: 'wrap', gap: '2px', alignContent: 'flex-start',
                         cursor: canEdit ? 'pointer' : 'default', borderBottom: '1px solid var(--border)',
+                        position: 'relative',
                       }}
                       onMouseEnter={e => { if (canEdit) e.currentTarget.style.background = 'var(--bg-hover)' }}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      {driverEntries.length === 0 && (
+                      {driverEntries.length === 0 && canEdit && (
                         <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 1 }} className="slot-hover-plus">
                           <Plus size={14} style={{ color: 'var(--text-muted)' }} />
                         </div>
                       )}
-                      {driverEntries.map(renderEntry)}
+                      {driverEntries.length === 0 && !canEdit && (
+                        <span style={{ width: '100%', textAlign: 'center', fontSize: '9px', color: 'var(--text-muted)', opacity: 0.4, paddingTop: '4px' }}>D</span>
+                      )}
+                      {driverEntries.map(e => renderEntry(e, 'driver'))}
                     </div>
                     {/* Helper half */}
                     <div
@@ -396,16 +433,20 @@ export default function Schedule() {
                       style={{
                         flex: 1, minHeight: '28px', padding: '3px 4px', display: 'flex', flexWrap: 'wrap', gap: '2px', alignContent: 'flex-start',
                         cursor: canEdit ? 'pointer' : 'default',
+                        position: 'relative',
                       }}
                       onMouseEnter={e => { if (canEdit) e.currentTarget.style.background = 'var(--bg-hover)' }}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      {helperEntries.length === 0 && (
+                      {helperEntries.length === 0 && canEdit && (
                         <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 1 }} className="slot-hover-plus">
                           <Plus size={14} style={{ color: 'var(--text-muted)' }} />
                         </div>
                       )}
-                      {helperEntries.map(renderEntry)}
+                      {helperEntries.length === 0 && !canEdit && (
+                        <span style={{ width: '100%', textAlign: 'center', fontSize: '9px', color: 'var(--text-muted)', opacity: 0.4, paddingTop: '4px' }}>H</span>
+                      )}
+                      {helperEntries.map(e => renderEntry(e, 'helper'))}
                     </div>
                   </div>
                 )
@@ -543,7 +584,7 @@ export default function Schedule() {
                           onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
-                          <div className={`avatar ${avatarColors[c.name.charCodeAt(4) % avatarColors.length]}`} style={{ width: '30px', height: '30px', fontSize: '10px' }}>
+                          <div className={`avatar ${getAvatarColor(c.name)}`} style={{ width: '30px', height: '30px', fontSize: '10px' }}>
                             {getInitials(c.name)}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
@@ -566,7 +607,7 @@ export default function Schedule() {
                       padding: '12px', background: 'var(--bg-tertiary)',
                       borderRadius: 'var(--radius-sm)', marginBottom: '16px',
                     }}>
-                      <div className={`avatar ${avatarColors[selectedContact.name.charCodeAt(4) % avatarColors.length]}`} style={{ width: '36px', height: '36px', fontSize: '12px' }}>
+                      <div className={`avatar ${getAvatarColor(selectedContact.name)}`} style={{ width: '36px', height: '36px', fontSize: '12px' }}>
                         {getInitials(selectedContact.name)}
                       </div>
                       <div style={{ flex: 1 }}>
