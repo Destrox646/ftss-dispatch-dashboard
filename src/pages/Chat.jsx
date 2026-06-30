@@ -17,7 +17,7 @@ export default function Chat() {
   const { user } = useAuth()
   const { data: messages } = useChatMessages()
   const { avatars } = useContactAvatars()
-  const { allContacts, ftssContacts } = useContacts()
+  const { ftssContacts } = useContacts()
   const currentUserId = user?.userId || user?.uid || user?.phone || 'user'
   const currentUserName = user?.name || user?.email?.split('@')[0] || user?.phone || 'User'
   const currentUserAvatar = currentUserName
@@ -81,15 +81,14 @@ export default function Chat() {
 
   const quickContacts = useMemo(() => {
     const q = quickSearch.trim().toLowerCase()
-    const contactsWithPhones = allContacts.filter(c => c.phones?.length > 0)
-    if (!q) return contactsWithPhones.slice(0, 60)
+    const contactsWithPhones = ftssContacts.filter(c => c.phones?.length > 0)
+    if (!q) return contactsWithPhones
     return contactsWithPhones
       .filter(c =>
         c.name.toLowerCase().includes(q) ||
         c.phones.some(p => p.number.includes(q))
       )
-      .slice(0, 60)
-  }, [allContacts, quickSearch])
+  }, [ftssContacts, quickSearch])
 
   const openQuickMessage = (contact = null) => {
     setQuickRecipient(contact)
