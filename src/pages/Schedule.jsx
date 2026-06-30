@@ -46,11 +46,20 @@ export default function Schedule() {
   const [tooltipPos, setTooltipPos] = useState(null)
   const hoverTimerRef = useRef(null)
   const fileInputRef = useRef(null)
+  const modalRef = useRef(null)
+  const [recentContacts, setRecentContacts] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ftss-schedule-recent') || '[]') } catch { return [] }
+  })
 
   // Sync labels from Firestore
   useEffect(() => {
     if (savedLabels) setRowLabels(savedLabels)
   }, [savedLabels])
+
+  // Focus modal overlay for Escape key
+  useEffect(() => {
+    if (modalCell && modalRef.current) modalRef.current.focus()
+  }, [modalCell])
 
   const weekDates = useMemo(() =>
     DAYS.map((_, i) => addDays(weekStart, i)),
@@ -81,6 +90,15 @@ export default function Schedule() {
     setShowAllContacts(false)
   }
 
+  const addRecentContact = (contact) => {
+    setRecentContacts(prev => {
+      const filtered = prev.filter(c => c.id !== contact.id)
+      const next = [{ id: contact.id, name: contact.name }, ...filtered].slice(0, 10)
+      localStorage.setItem('ftss-schedule-recent', JSON.stringify(next))
+      return next
+    })
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!selectedContact) return
@@ -95,6 +113,7 @@ export default function Schedule() {
       phone: selectedContact.phones[0]?.number || '',
       note,
     })
+    addRecentContact(selectedContact)
     setModalCell(null)
   }
 
@@ -526,11 +545,11 @@ export default function Schedule() {
 
       {/* Assignment Modal */}
       {modalCell && (
-        <div className="modal-overlay" onClick={() => setModalCell(null)}>
+        <div ref={modalRef} className="modal-overlay" tabIndex={-1} onClick={() => setModalCell(null)} onKeyDown={e => { if (e.key === 'Escape') setModalCell(null) }}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
             <div className="modal-header">
               <h3>
-                Assign — {DAYS[modalCell.dayIdx]}, {format(weekDates[modalCell.dayIdx], 'MMM d')} at {rowLabels[modalCell.rowIdx]}
+                Assign {assignRole === 'driver' ? 'Driver' : 'Helper'} — {DAYS[modalCell.dayIdx]}, {format(weekDates[modalCell.dayIdx], 'MMM d')} at {rowLabels[modalCell.rowIdx]}
               </h3>
               <button className="modal-close" onClick={() => setModalCell(null)}><X size={20} /></button>
             </div>
@@ -582,6 +601,31 @@ export default function Schedule() {
                         All Contacts
                       </button>
                     </div>
+                    {recentContacts.length > 0 && !search.trim() && (
+                      <div style={{ marginBottom: '8px' }}>
+                        <div style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px', paddingLeft: '4px' }}>Recently Assigned</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                          {recentContacts.map(rc => {
+                            const fullContact = (showAllContacts ? allContacts : ftssContacts).find(c => c.id === rc.id)
+                            if (!fullContact) return null
+                            return (
+                              <button
+                                key={rc.id}
+                                type="button"
+                                onClick={() => { setSelectedContact(fullContact); setSearch(''); }}
+                                className="btn btn-sm btn-ghost"
+                                style={{ fontSize: '11px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <div className={`avatar ${getAvatarColor(fullContact.name)}`} style={{ width: '16px', height: '16px', fontSize: '6px', flexShrink: 0 }}>
+                                  {getInitials(fullContact.name)}
+                                </div>
+                                {fullContact.name.replace(/^FTSS\s*/i, '')}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                     <div style={{ maxHeight: '260px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
                       {filteredContacts.map(c => (
                         <div
