@@ -17,7 +17,7 @@ export function AuthProvider({ children }) {
           const validate = httpsCallable(functions, 'validateSession')
           const result = await validate({ token })
           if (result.data.valid) {
-            setUser({ userId: result.data.userId, name: result.data.name, phone: result.data.phone, token })
+            setUser({ userId: result.data.userId, name: result.data.name, phone: result.data.phone, role: result.data.role || 'worker', token })
             setLoading(false)
             return
           }
@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
         const result = await checkIP({ ip })
         if (result.data.trusted) {
           localStorage.setItem('ftss-auth-token', result.data.token)
-          setUser({ userId: result.data.userId, name: result.data.name, phone: result.data.phone, token: result.data.token })
+          setUser({ userId: result.data.userId, name: result.data.name, phone: result.data.phone, role: result.data.role || 'worker', token: result.data.token })
           setLoading(false)
           return
         }

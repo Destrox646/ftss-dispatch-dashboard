@@ -3,10 +3,13 @@ import { Plus, X, Check, XIcon, Calendar, Search } from 'lucide-react'
 import { format, differenceInDays } from 'date-fns'
 import { useContacts } from '../hooks/useContacts'
 import { useTimeOffRequests, addTimeOffRequest, updateTimeOffStatus } from '../hooks/useFirestore'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function TimeOff() {
   const { data: requests } = useTimeOffRequests()
   const { ftssContacts } = useContacts()
+  const { user } = useAuth()
+  const canApprove = user?.role === 'manager' || user?.role === 'supervisor'
   const [showModal, setShowModal] = useState(false)
   const [tab, setTab] = useState('pending')
   const [search, setSearch] = useState('')
@@ -137,7 +140,7 @@ export default function TimeOff() {
                   <th>Reason</th>
                   <th>Submitted</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  {canApprove && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -165,22 +168,24 @@ export default function TimeOff() {
                         {req.status}
                       </span>
                     </td>
-                    <td>
-                      {req.status === 'pending' && (
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button className="btn btn-sm btn-success" onClick={() => updateStatus(req.id, 'approved')}>
-                            <Check size={14} /> Approve
-                          </button>
-                          <button className="btn btn-sm btn-danger" onClick={() => updateStatus(req.id, 'denied')}>
-                            <XIcon size={14} /> Deny
-                          </button>
-                        </div>
-                      )}
-                    </td>
+                    {canApprove && (
+                      <td>
+                        {req.status === 'pending' && (
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button className="btn btn-sm btn-success" onClick={() => updateStatus(req.id, 'approved')}>
+                              <Check size={14} /> Approve
+                            </button>
+                            <button className="btn btn-sm btn-danger" onClick={() => updateStatus(req.id, 'denied')}>
+                              <XIcon size={14} /> Deny
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan="7" className="table-empty">No {tab === 'all' ? '' : tab} requests</td></tr>
+                  <tr><td colSpan={canApprove ? 7 : 6} className="table-empty">No {tab === 'all' ? '' : tab} requests</td></tr>
                 )}
               </tbody>
             </table>

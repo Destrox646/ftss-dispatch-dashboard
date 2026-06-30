@@ -1,6 +1,9 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useSettings } from '../contexts/SettingsContext'
-import { Save, Building2, User, Palette, Lock } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { httpsCallable } from 'firebase/functions'
+import { functions } from '../firebase'
+import { Save, Building2, User, Palette, Shield } from 'lucide-react'
 
 const ACCENT_PRESETS = [
   { label: 'Blue', value: '#3b82f6' },
@@ -14,6 +17,8 @@ const ACCENT_PRESETS = [
 
 export default function Settings() {
   const { settings, updateSettings } = useSettings()
+  const { user } = useAuth()
+  const isManager = user?.role === 'manager'
   const [companyName, setCompanyName] = useState(settings.companyName)
   const [logoInitials, setLogoInitials] = useState(settings.logoInitials)
   const [logoImage, setLogoImage] = useState(settings.logoImage)
@@ -21,9 +26,10 @@ export default function Settings() {
   const [accentColor, setAccentColor] = useState(settings.accentColor)
   const [dashboardSubtitle, setDashboardSubtitle] = useState(settings.dashboardSubtitle)
   const [greetingOverride, setGreetingOverride] = useState(settings.greetingOverride)
-  const [scheduleEditEnabled, setScheduleEditEnabled] = useState(settings.scheduleEditEnabled)
   const [saved, setSaved] = useState(false)
   const logoInputRef = useRef(null)
+  const [users, setUsers] = useState([])
+  const [usersLoading, setUsersLoading] = useState(true)
 
   const handleLogoImageChange = (e) => {
     const file = e.target.files?.[0]
@@ -31,6 +37,29 @@ export default function Settings() {
     const reader = new FileReader()
     reader.onload = (ev) => setLogoImage(ev.target.result)
     reader.readAsDataURL(file)
+  }
+
+  useEffect(() => {
+    if (!isManager) { setUsersLoading(false); return }
+    const loadUsers = async () => {
+      try {
+        const listUsers = httpsCallable(functions, 'listUsers')
+        const result = await listUsers({ token: user.token })
+        setUsers(result.data.users || [])
+      } catch { /* ignore */ }
+      setUsersLoading(false)
+    }
+    loadUsers()
+  }, [isManager, user?.token])
+
+  const handleRoleChange = async (targetUserId, newRole) => {
+    try {
+      const setUserRole = httpsCallable(functions, 'setUserRole')
+      await setUserRole({ targetUserId, role: newRole, token: user.token })
+      setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, role: newRole } : u))
+    } catch (err) {
+      alert(err.message || 'Failed to update role')
+    }
   }
 
   const handleSave = (e) => {
@@ -43,7 +72,6 @@ export default function Settings() {
       accentColor,
       dashboardSubtitle: dashboardSubtitle.trim() || 'Dispatch Dashboard',
       greetingOverride: greetingOverride.trim(),
-      scheduleEditEnabled,
     })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -178,25 +206,59 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="card" style={{ marginBottom: '20px' }}>
-            <div className="card-header"><h3><Lock size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />Permissions</h3></div>
-            <div className="card-body">
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={scheduleEditEnabled}
-                    onChange={e => setScheduleEditEnabled(e.target.checked)}
-                    style={{ width: '18px', height: '18px', accentColor: accentColor }}
-                  />
-                  Allow schedule editing
-                </label>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '28px', display: 'block' }}>
-                  When disabled, the schedule is view-only for everyone.
-                </span>
+          {isManager && (
+            <div className="card" style={{ marginBottom: '20px' }}>
+              <div className="card-header"><h3><Shield size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />User Roles</h3></div>
+              <div className="card-body">
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                  <strong>Manager</strong> — Full access: edit schedule, approve time off, manage contacts & roles<br />
+                  <strong>Supervisor</strong> — Edit schedule, approve time off, send messages<br />
+                  <strong>Worker</strong> — View schedule, submit time off requests, send messages
+                </div>
+                {usersLoading ? (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Loading users...</div>
+                ) : (
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Phone</th>
+                          <th>Role</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map(u => (
+                          <tr key={u.id}>
+                            <td style={{ fontWeight: 500 }}>{u.name || '—'}</td>
+                            <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{u.phone}</td>
+                            <td>
+                              <select
+                                value={u.role || 'worker'}
+                                onChange={e => handleRoleChange(u.id, e.target.value)}
+                                style={{
+                                  padding: '6px 10px', borderRadius: '6px',
+                                  border: '1px solid var(--border)', background: 'var(--bg-primary)',
+                                  color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer',
+                                }}
+                              >
+                                <option value="worker">Worker</option>
+                                <option value="supervisor">Supervisor</option>
+                                <option value="manager">Manager</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                        {users.length === 0 && (
+                          <tr><td colSpan="3" className="table-empty">No users found</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button type="submit" className="btn btn-primary">

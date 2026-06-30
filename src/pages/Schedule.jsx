@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Plus, X, ChevronLeft, ChevronRight, Search, Users, Download, Upload } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
 import { useScheduleEntries, useScheduleLabels, addScheduleEntry, deleteScheduleEntry } from '../hooks/useFirestore'
-import { useSettings } from '../contexts/SettingsContext'
+import { useAuth } from '../contexts/AuthContext'
 import { useContacts } from '../hooks/useContacts'
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -16,9 +16,9 @@ const defaultLabels = [
 export default function Schedule() {
   const { data: entries } = useScheduleEntries()
   const { labels: savedLabels, saveLabels } = useScheduleLabels()
-  const { settings } = useSettings()
+  const { user } = useAuth()
   const { allContacts, ftssContacts } = useContacts()
-  const canEdit = settings.scheduleEditEnabled
+  const canEdit = user?.role === 'manager' || user?.role === 'supervisor'
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [modalCell, setModalCell] = useState(null)
   const [search, setSearch] = useState('')

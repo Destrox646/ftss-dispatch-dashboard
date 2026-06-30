@@ -71,11 +71,15 @@ exports.registerUser = onCall({ auth: null }, async (request) => {
   }
 
   const hashed = await bcrypt.hash(password, 10);
+  // First user becomes manager, rest are workers
+  const existingUsers = await db.collection("users").get();
+  const isFirstUser = existingUsers.empty;
   const userRef = db.collection("users").doc();
   await userRef.set({
     phone: normalized,
     password: hashed,
     name: name || '',
+    role: isFirstUser ? 'manager' : 'worker',
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
@@ -116,7 +120,7 @@ exports.loginUser = onCall({ auth: null }, async (request) => {
     expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // 30 days
   });
 
-  return { success: true, token, userId: userDoc.id, name: userData.name, phone: normalized };
+  return { success: true, token, userId: userDoc.id, name: userData.name, phone: normalized, role: userData.role || 'worker' };
 });
 
 // ─── Auth: Validate Session ───
@@ -140,7 +144,11 @@ exports.validateSession = onCall({ auth: null }, async (request) => {
     return { valid: false };
   }
 
-  return { valid: true, userId: data.userId, name: data.name, phone: data.phone };
+  // Get user role
+  const userDoc = await db.collection("users").doc(data.userId).get();
+  const role = userDoc.exists ? (userDoc.data().role || 'worker') : 'worker';
+
+  return { valid: true, userId: data.userId, name: data.name, phone: data.phone, role };
 });
 
 // ─── Auth: Trust IP ───
@@ -196,10 +204,54 @@ exports.checkIP = onCall({ auth: null }, async (request) => {
     expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
   });
 
-  return { trusted: true, token, userId: data.userId, name: data.name, phone: data.phone };
+  // Get user role
+  const userDoc = await db.collection("users").doc(data.userId).get();
+  const role = userDoc.exists ? (userDoc.data().role || 'worker') : 'worker';
+
+  return { trusted: true, token, userId: data.userId, name: data.name, phone: data.phone, role };
 });
 
-// ─── Auth: Logout ───
+// ─── User Roles ───
+exports.listUsers = onCall({ auth: null }, async (request) => {
+  const db = admin.firestore();
+  const snap = await db.collection("users").get();
+  const users = snap.docs.map(d => ({
+    id: d.id,
+    name: d.data().name || '',
+    phone: d.data().phone || '',
+    role: d.data().role || 'worker',
+  }));
+  return { users };
+});
+
+exports.setUserRole = onCall({ auth: null }, async (request) => {
+  const { targetUserId, role, token } = request.data;
+  if (!targetUserId || !role || !['manager', 'supervisor', 'worker'].includes(role)) {
+    throw new HttpsError("invalid-argument", "Valid targetUserId and role are required.");
+  }
+  const db = admin.firestore();
+
+  // Check if any managers exist
+  const managersSnap = await db.collection("users").where("role", "==", "manager").get();
+  if (managersSnap.empty) {
+    // No managers exist — allow anyone to set roles (bootstrapping)
+    await db.collection("users").doc(targetUserId).update({ role });
+    return { success: true };
+  }
+
+  // Verify caller is a manager
+  if (token) {
+    const session = await db.collection("sessions").doc(token).get();
+    if (session.exists) {
+      const callerSnap = await db.collection("users").doc(session.data().userId).get();
+      if (!callerSnap.exists || (callerSnap.data().role || 'worker') !== 'manager') {
+        throw new HttpsError("permission-denied", "Only managers can change roles.");
+      }
+    }
+  }
+  await db.collection("users").doc(targetUserId).update({ role });
+  return { success: true };
+});
 exports.logoutUser = onCall({ auth: null }, async (request) => {
   const { token } = request.data;
 

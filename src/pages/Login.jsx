@@ -45,7 +45,7 @@ export default function Login({ onLogin }) {
 
       const login = httpsCallable(functions, 'loginUser')
       const result = await login({ phone: formatted, password })
-      const { token, userId, name: userName, phone: userPhone } = result.data
+      const { token, userId, name: userName, phone: userPhone, role: userRole } = result.data
 
       localStorage.setItem('ftss-auth-token', token)
 
@@ -58,7 +58,7 @@ export default function Login({ onLogin }) {
         } catch { /* non-critical */ }
       }
 
-      onLogin({ userId, name: userName, phone: userPhone, token })
+      onLogin({ userId, name: userName, phone: userPhone, role: userRole || 'worker', token })
     } catch (err) {
       setError(err.message || 'Login failed')
     }

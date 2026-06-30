@@ -4,14 +4,12 @@ import { useContactAvatars } from '../hooks/useContactAvatars'
 import { useContacts } from '../hooks/useContacts'
 import { useAuth } from '../contexts/AuthContext'
 
-const ADMIN_PHONE = '+12623272419'
-
 export default function Contacts() {
   const [search, setSearch] = useState('')
   const { avatars, setAvatar } = useContactAvatars()
   const { ftssContacts, addContact, editContact, deleteContact } = useContacts()
   const { user } = useAuth()
-  const isAdmin = user?.phone === ADMIN_PHONE
+  const isManager = user?.role === 'manager'
   const avatarInputRef = useRef(null)
   const [editingContactId, setEditingContactId] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
@@ -156,7 +154,7 @@ export default function Contacts() {
                   <th>Phone</th>
                   <th>Email</th>
                   <th>Organization</th>
-                  {isAdmin && <th style={{ width: '80px' }}></th>}
+                  {isManager && <th style={{ width: '80px' }}></th>}
                 </tr>
               </thead>
               <tbody>
@@ -221,7 +219,7 @@ export default function Contacts() {
                         <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
                       )}
                     </td>
-                    {isAdmin && (
+                    {isManager && (
                       <td>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)} title="Edit">
