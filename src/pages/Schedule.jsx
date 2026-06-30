@@ -285,7 +285,11 @@ export default function Schedule() {
             <button className="btn btn-ghost" onClick={() => setWeekStart(d => addWeeks(d, 1))}>
               <ChevronRight size={16} />
             </button>
-            <button className="btn btn-ghost" style={{ marginLeft: '8px' }} onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
+            <button
+              className={`btn ${format(weekStart, 'yyyy-MM-dd') === format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd') ? 'btn-ghost' : 'btn-primary'}`}
+              style={{ marginLeft: '8px', fontSize: '12px' }}
+              onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}
+            >
               Today
             </button>
             <button className="btn btn-ghost" style={{ marginLeft: '4px' }} onClick={downloadCSV} title="Download schedule as CSV">
@@ -480,7 +484,7 @@ export default function Schedule() {
               const angle = (2 * Math.PI * i) / allEntries.length - Math.PI / 2
               const x = Math.cos(angle) * ringRadius
               const y = Math.sin(angle) * ringRadius
-              const colorClass = entry.role === 'driver' ? 'avatar-blue' : 'avatar-green'
+              const isDriver = entry.role === 'driver'
               return (
                 <div key={entry.id} style={{
                   position: 'absolute',
@@ -488,9 +492,9 @@ export default function Schedule() {
                   transform: 'translate(-50%, -50%)',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
                 }}>
-                  <div className={`avatar ${colorClass}`} style={{
+                  <div className={`avatar ${getAvatarColor(entry.contactName)}`} style={{
                     width: '38px', height: '38px', fontSize: '12px',
-                    border: '2px solid var(--border)',
+                    border: `2px solid ${isDriver ? 'var(--accent)' : 'var(--green)'}`,
                     boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                   }}>
                     {getInitials(entry.contactName)}
@@ -503,8 +507,15 @@ export default function Schedule() {
                     maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis',
                     textAlign: 'center',
                   }}>
-                    {entry.contactName}
+                    {entry.contactName.split(' ').slice(1).join(' ')}
                   </div>
+                  <span style={{
+                    fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                    color: isDriver ? 'var(--accent)' : 'var(--green)',
+                    opacity: 0.8,
+                  }}>
+                    {isDriver ? 'Driver' : 'Helper'}
+                  </span>
                 </div>
               )
             })}
@@ -641,7 +652,6 @@ export default function Schedule() {
         </div>
       )}
 
-      <style>{`.slot-hover-plus { opacity: 1 !important; }`}</style>
     </>
   )
 }
