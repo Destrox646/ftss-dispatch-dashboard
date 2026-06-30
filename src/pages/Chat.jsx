@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, Hash, Users, ChevronDown, ChevronRight, Radio, X, Search, CheckCircle } from 'lucide-react'
+import { Send, Hash, Users, ChevronDown, ChevronRight, Radio, X, Search, CheckCircle, MessageCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { useChatMessages, sendMessage } from '../hooks/useFirestore'
 import { useAuth } from '../contexts/AuthContext'
@@ -17,7 +17,7 @@ export default function Chat() {
   const { user } = useAuth()
   const { data: messages } = useChatMessages()
   const { avatars } = useContactAvatars()
-  const { ftssContacts } = useContacts()
+  const { allContacts, ftssContacts } = useContacts()
   const currentUserId = user?.userId || user?.uid || user?.phone || 'user'
   const currentUserName = user?.name || user?.email?.split('@')[0] || user?.phone || 'User'
   const currentUserAvatar = currentUserName
@@ -38,6 +38,13 @@ export default function Chat() {
   const [broadcastSent, setBroadcastSent] = useState(false)
   const [broadcastSending, setBroadcastSending] = useState(false)
   const [broadcastResult, setBroadcastResult] = useState(null)
+  const [quickOpen, setQuickOpen] = useState(false)
+  const [quickSearch, setQuickSearch] = useState('')
+  const [quickRecipient, setQuickRecipient] = useState(null)
+  const [quickMsg, setQuickMsg] = useState('')
+  const [quickSending, setQuickSending] = useState(false)
+  const [quickSent, setQuickSent] = useState(false)
+  const [quickResult, setQuickResult] = useState(null)
   const ftssGroup = { id: 'ftss', name: 'FTSS', type: 'group', members: ftssContacts, memberCount: ftssContacts.length }
   const messagesEndRef = useRef(null)
 
@@ -70,6 +77,60 @@ export default function Chat() {
       channel: activeChannel,
     })
     setInput('')
+  }
+
+  const quickContacts = useMemo(() => {
+    const q = quickSearch.trim().toLowerCase()
+    const contactsWithPhones = allContacts.filter(c => c.phones?.length > 0)
+    if (!q) return contactsWithPhones.slice(0, 60)
+    return contactsWithPhones
+      .filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        c.phones.some(p => p.number.includes(q))
+      )
+      .slice(0, 60)
+  }, [allContacts, quickSearch])
+
+  const openQuickMessage = (contact = null) => {
+    setQuickRecipient(contact)
+    setQuickSearch(contact ? contact.name.replace(/^FTSS\s*/i, '') : '')
+    setQuickMsg('')
+    setQuickSending(false)
+    setQuickSent(false)
+    setQuickResult(null)
+    setQuickOpen(true)
+  }
+
+  const handleQuickSend = async (e) => {
+    e.preventDefault()
+    if (!quickMsg.trim() || !quickRecipient?.phones?.[0]) return
+
+    setQuickSending(true)
+    const messageText = quickMsg.trim()
+    await sendMessage({
+      senderId: currentUserId,
+      senderName: currentUserName,
+      senderAvatar: currentUserAvatar,
+      text: messageText,
+      channel: `direct-${quickRecipient.id}`,
+      direct: true,
+      recipientId: quickRecipient.id,
+      recipientName: quickRecipient.name,
+    })
+
+    try {
+      const sendMassText = httpsCallable(functions, 'sendMassText')
+      const result = (await sendMassText({
+        message: messageText,
+        recipients: [{ name: quickRecipient.name, phone: quickRecipient.phones[0].number }],
+      })).data
+      setQuickResult(result)
+    } catch (err) {
+      setQuickResult({ success: 0, failed: 1, errors: [{ error: err.message }] })
+    }
+
+    setQuickSending(false)
+    setQuickSent(true)
   }
 
   const formatTime = (timestamp) => {
@@ -109,7 +170,10 @@ export default function Chat() {
         flexShrink: 0,
       }}>
         <div style={{ padding: '16px', borderBottom: '1px solid var(--border)' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Messages</h3>
+          <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '10px' }}>Messages</h3>
+          <button onClick={() => openQuickMessage()} className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
+            <MessageCircle size={14} /> Quick Message
+          </button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
           <button onClick={() => setChannelsOpen(o => !o)} style={{
@@ -297,18 +361,129 @@ export default function Chat() {
                   padding: '8px 16px', borderBottom: '1px solid var(--border)',
                 }}>
                   {renderAvatar(m.name, (m.firstName[0] || '') + (m.lastName[0] || ''), '28px')}
-                  <div style={{ minWidth: 0 }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
                     {m.phones[0] && (
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{m.phones[0].number}</div>
                     )}
                   </div>
+                  {m.phones[0] && (
+                    <button type="button" className="btn btn-primary btn-sm" onClick={() => openQuickMessage(m)}>
+                      <Send size={12} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {/* Quick Message Modal */}
+      {quickOpen && (
+        <div className="modal-overlay" onClick={() => setQuickOpen(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <MessageCircle size={18} style={{ color: 'var(--accent)' }} />
+                Quick Message
+              </h3>
+              <button className="modal-close" onClick={() => setQuickOpen(false)}><X size={20} /></button>
+            </div>
+            {!quickSent ? (
+              <form onSubmit={handleQuickSend}>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label>Send to anyone</label>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                      <input
+                        type="text"
+                        placeholder="Search all contacts by name or phone..."
+                        value={quickSearch}
+                        onChange={e => { setQuickSearch(e.target.value); setQuickRecipient(null) }}
+                        autoFocus
+                        style={{ paddingLeft: '32px', fontSize: '13px', padding: '8px 12px 8px 32px', width: '100%' }}
+                      />
+                    </div>
+                    <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', marginTop: '8px' }}>
+                      {quickContacts.map(c => {
+                        const selected = quickRecipient?.id === c.id
+                        const initials = (c.firstName?.[0] || '') + (c.lastName?.[0] || '') || c.name.slice(0, 2).toUpperCase()
+                        return (
+                          <button
+                            type="button"
+                            key={c.id}
+                            onClick={() => { setQuickRecipient(c); setQuickSearch(c.name.replace(/^FTSS\s*/i, '')) }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '10px', width: '100%', textAlign: 'left',
+                              padding: '9px 12px', cursor: 'pointer', border: 'none', borderBottom: '1px solid var(--border)',
+                              background: selected ? 'rgba(59,130,246,0.12)' : 'transparent',
+                            }}
+                          >
+                            {renderAvatar(c.name, initials, '28px')}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name.replace(/^FTSS\s*/i, '')}</div>
+                              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{c.phones[0].number}</div>
+                            </div>
+                            {selected && <CheckCircle size={16} style={{ color: 'var(--accent)' }} />}
+                          </button>
+                        )
+                      })}
+                      {quickContacts.length === 0 && (
+                        <div style={{ padding: '16px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>No contacts found</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Message {quickRecipient ? `to ${quickRecipient.name.replace(/^FTSS\s*/i, '')}` : ''}</label>
+                    <textarea
+                      placeholder="Type your message..."
+                      value={quickMsg}
+                      onChange={e => setQuickMsg(e.target.value)}
+                      rows={4}
+                      style={{ resize: 'vertical' }}
+                    />
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-ghost" onClick={() => setQuickOpen(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" disabled={!quickRecipient || !quickMsg.trim() || quickSending}>
+                    {quickSending ? <><span className="spinner" /> Sending...</> : <><Send size={14} /> Send Message</>}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="modal-body" style={{ textAlign: 'center', padding: '40px 24px' }}>
+                <CheckCircle size={48} style={{ color: '#10b981', marginBottom: '16px' }} />
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>Message Sent</h3>
+                <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                  Sent to {quickRecipient?.name.replace(/^FTSS\s*/i, '')}
+                </p>
+                {quickResult && (
+                  <div style={{
+                    background: quickResult.failed > 0 ? 'var(--red-light)' : 'var(--green-light)',
+                    borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: '24px', fontSize: '13px',
+                  }}>
+                    <p style={{ fontWeight: 600, marginBottom: '4px' }}>
+                      SMS Results: {quickResult.success} sent, {quickResult.failed} failed
+                    </p>
+                    {quickResult.errors && quickResult.errors.length > 0 && (
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px' }}>
+                        {quickResult.errors.map(e => e.error).slice(0, 3).join('; ')}
+                      </p>
+                    )}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                  <button type="button" className="btn btn-ghost" onClick={() => openQuickMessage()}>Send Another</button>
+                  <button type="button" className="btn btn-primary" onClick={() => setQuickOpen(false)}>Done</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Broadcast Modal */}
       {broadcastOpen && (
