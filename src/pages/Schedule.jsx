@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, X, ChevronLeft, ChevronRight, Search, Users, Download, Upload } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
-import { useScheduleEntries, useScheduleLabels, addScheduleEntry, deleteScheduleEntry, deleteScheduleEntriesForDates, useTimeOffRequests } from '../hooks/useFirestore'
+import { useScheduleEntries, useScheduleLabels, addScheduleEntry, deleteScheduleEntry, deleteScheduleEntriesForDates, deleteAllScheduleEntries, useTimeOffRequests } from '../hooks/useFirestore'
 import { useAuth } from '../contexts/AuthContext'
 import { useContacts } from '../hooks/useContacts'
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -314,6 +314,12 @@ export default function Schedule() {
     e.target.value = ''
   }
 
+  const handleClearAll = async () => {
+    const ok = window.confirm('Clear ALL schedule entries? This removes every assignment across all weeks.')
+    if (!ok) return
+    await deleteAllScheduleEntries()
+  }
+
   const handleGenerate = async () => {
     if (!generatePermission) {
       const ok = window.confirm('Generate a full week schedule automatically? This will replace all current entries for the visible week with randomized FTSS driver and helper assignments. This only asks once — future clicks will generate immediately.')
@@ -422,6 +428,15 @@ export default function Schedule() {
               title="Auto-generate schedule for this week"
             >
               {generating ? 'Generating...' : 'Generate'}
+            </button>
+            <button
+              className="btn btn-ghost"
+              style={{ marginLeft: '4px', fontSize: '12px', color: 'var(--red)' }}
+              onClick={handleClearAll}
+              disabled={!canEdit}
+              title="Clear all schedule entries"
+            >
+              Clear All
             </button>
           </div>
         </div>

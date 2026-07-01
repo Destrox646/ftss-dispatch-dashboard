@@ -88,3 +88,9 @@ export async function deleteScheduleEntriesForDates(dateStrs) {
   const toDelete = snap.docs.filter(d => dateStrs.includes(d.data().date))
   await Promise.all(toDelete.map(d => deleteDoc(doc(db, 'scheduleEntries', d.id))))
 }
+
+export async function deleteAllScheduleEntries() {
+  const { getDocs } = await import('firebase/firestore')
+  const snap = await getDocs(collection(db, 'scheduleEntries'))
+  await Promise.all(snap.docs.map(d => deleteDoc(doc(db, 'scheduleEntries', d.id))))
+}
