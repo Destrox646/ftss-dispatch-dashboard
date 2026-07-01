@@ -2,15 +2,12 @@ import { useState, useMemo, useRef } from 'react'
 import { Search, Phone, Mail, Building2, Camera, Plus, X, Pencil, Trash2 } from 'lucide-react'
 import { useContactAvatars } from '../hooks/useContactAvatars'
 import { useContacts } from '../hooks/useContacts'
-import { useAuth } from '../contexts/AuthContext'
 
 export default function Contacts() {
   const [tab, setTab] = useState('active')
   const [search, setSearch] = useState('')
   const { avatars, setAvatar } = useContactAvatars()
   const { ftssContacts, allContacts, addContact, editContact, deleteContact } = useContacts()
-  const { user } = useAuth()
-  const isManager = user?.role === 'manager'
   const avatarInputRef = useRef(null)
   const [editingContactId, setEditingContactId] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
@@ -125,11 +122,9 @@ export default function Contacts() {
             <h2>Contacts</h2>
             <p>{ftssContacts.length.toLocaleString()} FTSS contacts</p>
           </div>
-          {isManager && (
-            <button className="btn btn-primary" onClick={() => setShowAdd(true)} style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
-              <Plus size={16} /> Add Contact
-            </button>
-          )}
+          <button className="btn btn-primary" onClick={() => setShowAdd(true)} style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
+            <Plus size={16} /> Add Contact
+          </button>
         </div>
       </div>
       <div className="page-body">
