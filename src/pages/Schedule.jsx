@@ -13,7 +13,7 @@ const DEFAULT_LABELS = [
   'JB Hunt Detroit 1', 'RXO Grand Rapids 1',
   'JB Hunt Des Moines 1', 'JB Hunt Des Moines 2',
   'Request offs 1', 'Request offs 2',
-  'Notes 1', 'Notes 2',
+  'IFS Waukesha 1', 'IFS Waukesha 2',
 ]
 
 export default function Schedule() {
