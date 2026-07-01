@@ -275,8 +275,14 @@ export default function Schedule() {
         // Original format: one row per role per route
         for (let r = 1; r < rows.length; r++) {
           const cells = rows[r]
-          const label = (cells[0] || '').toLowerCase().trim()
-          const rowIdx = currentLabels.indexOf(label)
+          let rawLabel = (cells[0] || '').toLowerCase().trim()
+          // Detect role from label suffix (e.g. "RXO Minooka 1 Driver")
+          let csvRole = null
+          if (rawLabel.endsWith(' driver')) { csvRole = 'driver'; rawLabel = rawLabel.replace(/\s+driver$/, '') }
+          else if (rawLabel.endsWith(' helper')) { csvRole = 'helper'; rawLabel = rawLabel.replace(/\s+helper$/, '') }
+          // Try exact match first, then partial
+          let rowIdx = currentLabels.indexOf(rawLabel)
+          if (rowIdx === -1) rowIdx = currentLabels.findIndex(l => rawLabel.includes(l) || l.includes(rawLabel))
           if (rowIdx === -1) continue
           for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
             const cell = (cells[dayIdx + 1] || '').trim()
@@ -286,11 +292,14 @@ export default function Schedule() {
               const lower = name.toLowerCase()
               let contact = ftssContacts.find(c => c.name.toLowerCase() === ('ftss ' + lower))
               if (!contact) contact = ftssContacts.find(c => c.name.toLowerCase().includes(lower))
+              if (!contact) contact = ftssContacts.find(c => c.name.toLowerCase().replace(/^ftss\s*/i, '') === lower)
               if (!contact) continue
               const dateStr = format(weekDates[dayIdx], 'yyyy-MM-dd')
+              const role = csvRole || 'driver'
               addScheduleEntry({
                 date: dateStr,
                 row: rowIdx,
+                role,
                 contactId: contact.id,
                 contactName: contact.name,
                 phone: contact.phones[0]?.number || '',
