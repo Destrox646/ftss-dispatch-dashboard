@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, Hash, Users, ChevronDown, ChevronRight, Radio, X, Search, CheckCircle, MessageCircle } from 'lucide-react'
+import { Send, Users, ChevronDown, ChevronRight, Radio, X, Search, CheckCircle, MessageCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { useChatMessages, sendMessage } from '../hooks/useFirestore'
 import { useAuth } from '../contexts/AuthContext'
@@ -7,11 +7,6 @@ import { httpsCallable } from 'firebase/functions'
 import { functions } from '../firebase'
 import { useContactAvatars } from '../hooks/useContactAvatars'
 import { useContacts } from '../hooks/useContacts'
-
-const defaultChannels = [
-  { id: 'general', name: 'General', type: 'channel' },
-  { id: 'dispatch', name: 'Dispatch', type: 'channel' },
-]
 
 export default function Chat() {
   const { user } = useAuth()
@@ -27,9 +22,8 @@ export default function Chat() {
     .map(part => part[0]?.toUpperCase())
     .join('') || 'U'
   const [input, setInput] = useState('')
-  const [activeChannel, setActiveChannel] = useState('general')
+  const [activeChannel, setActiveChannel] = useState('ftss')
   const [showMembers, setShowMembers] = useState(false)
-  const [channelsOpen, setChannelsOpen] = useState(true)
   const [groupsOpen, setGroupsOpen] = useState(true)
   const [broadcastOpen, setBroadcastOpen] = useState(false)
   const [broadcastMsg, setBroadcastMsg] = useState('')
@@ -48,6 +42,30 @@ export default function Chat() {
   const ftssGroup = { id: 'ftss', name: 'FTSS', type: 'group', members: ftssContacts, memberCount: ftssContacts.length }
   const messagesEndRef = useRef(null)
 
+  const topContacts = useMemo(() => {
+    const counts = {}
+    messages.forEach(m => {
+      if (m.direct && m.senderId !== currentUserId) {
+        counts[m.senderId] = (counts[m.senderId] || 0) + 1
+      }
+      if (m.direct && m.recipientId === currentUserId) {
+        counts[m.senderId] = (counts[m.senderId] || 0) + 1
+      }
+      // Also count by channel name for direct channels
+      if (m.channel?.startsWith('direct-')) {
+        const contactId = m.channel.replace('direct-', '')
+        if (contactId !== currentUserId) {
+          counts[contactId] = (counts[contactId] || 0) + 1
+        }
+      }
+    })
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([contactId]) => ftssContacts.find(c => c.id === contactId))
+      .filter(Boolean)
+  }, [messages, ftssContacts, currentUserId])
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -63,7 +81,9 @@ export default function Chat() {
 
   const activeInfo = activeChannel === 'ftss'
     ? ftssGroup
-    : defaultChannels.find(c => c.id === activeChannel) || defaultChannels[0]
+    : activeChannel.startsWith('direct-')
+      ? { id: activeChannel, name: topContacts.find(c => `direct-${c.id}` === activeChannel)?.name || 'Contact', type: 'direct' }
+      : ftssGroup
 
   const handleSend = async (e) => {
     e.preventDefault()
@@ -175,33 +195,41 @@ export default function Chat() {
           </button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-          <button onClick={() => setChannelsOpen(o => !o)} style={{
+          <div style={{
             display: 'flex', alignItems: 'center', gap: '6px', width: '100%',
             padding: '6px 16px', background: 'none', border: 'none',
             color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700,
-            textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer',
+            textTransform: 'uppercase', letterSpacing: '0.05em',
           }}>
-            {channelsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            Channels
-          </button>
-          {channelsOpen && defaultChannels.map(ch => (
-            <button
-              key={ch.id}
-              onClick={() => setActiveChannel(ch.id)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
-                padding: '8px 16px 8px 28px', background: activeChannel === ch.id ? 'var(--bg-tertiary)' : 'none',
-                border: 'none', cursor: 'pointer', transition: 'background 0.15s',
-                borderLeft: activeChannel === ch.id ? '3px solid var(--accent)' : '3px solid transparent',
-              }}
-            >
-              <Hash size={16} style={{ color: activeChannel === ch.id ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0 }} />
-              <span style={{
-                fontSize: '14px', fontWeight: activeChannel === ch.id ? 600 : 400,
-                color: activeChannel === ch.id ? 'var(--text-primary)' : 'var(--text-secondary)',
-              }}>{ch.name}</span>
-            </button>
-          ))}
+            Recent Contacts
+          </div>
+          {topContacts.map(c => {
+            const chId = `direct-${c.id}`
+            const isActive = activeChannel === chId
+            const initials = (c.firstName?.[0] || '') + (c.lastName?.[0] || '') || c.name.slice(0, 2).toUpperCase()
+            return (
+              <button
+                key={c.id}
+                onClick={() => setActiveChannel(chId)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+                  padding: '8px 16px 8px 28px', background: isActive ? 'var(--bg-tertiary)' : 'none',
+                  border: 'none', cursor: 'pointer', transition: 'background 0.15s',
+                  borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
+                }}
+              >
+                {renderAvatar(c.name, initials, '24px')}
+                <span style={{
+                  fontSize: '14px', fontWeight: isActive ? 600 : 400,
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>{c.name}</span>
+              </button>
+            )
+          })}
+          {topContacts.length === 0 && (
+            <div style={{ padding: '8px 28px', fontSize: '12px', color: 'var(--text-muted)' }}>No recent contacts</div>
+          )}
 
           <button onClick={() => setGroupsOpen(o => !o)} style={{
             display: 'flex', alignItems: 'center', gap: '6px', width: '100%',
@@ -246,7 +274,7 @@ export default function Chat() {
           background: 'var(--bg-secondary)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {activeInfo.type === 'group' ? <Users size={18} style={{ color: 'var(--accent)' }} /> : <Hash size={18} style={{ color: 'var(--accent)' }} />}
+            {activeInfo.type === 'group' ? <Users size={18} style={{ color: 'var(--accent)' }} /> : <MessageCircle size={18} style={{ color: 'var(--accent)' }} />}
             <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>{activeInfo.name}</span>
             {activeInfo.type === 'group' && (
               <span style={{ fontSize: '13px', color: 'var(--text-muted)', marginLeft: '4px' }}>({ftssGroup.memberCount} members)</span>
@@ -272,7 +300,7 @@ export default function Chat() {
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                   height: '100%', color: 'var(--text-muted)', gap: '8px',
                 }}>
-                  {activeInfo.type === 'group' ? <Users size={40} style={{ opacity: 0.3 }} /> : <Hash size={40} style={{ opacity: 0.3 }} />}
+                  {activeInfo.type === 'group' ? <Users size={40} style={{ opacity: 0.3 }} /> : <MessageCircle size={40} style={{ opacity: 0.3 }} />}
                   <p style={{ fontSize: '15px', fontWeight: 600 }}>No messages yet</p>
                   <p style={{ fontSize: '13px' }}>Start the conversation in #{activeInfo.name}</p>
                 </div>
