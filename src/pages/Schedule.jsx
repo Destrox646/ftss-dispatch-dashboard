@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, X, ChevronLeft, ChevronRight, Search, Users, Download, Upload } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
-import { useScheduleEntries, useScheduleLabels, addScheduleEntry, deleteScheduleEntry } from '../hooks/useFirestore'
+import { useScheduleEntries, useScheduleLabels, addScheduleEntry, deleteScheduleEntry, deleteScheduleEntriesForDates, useTimeOffRequests } from '../hooks/useFirestore'
 import { useAuth } from '../contexts/AuthContext'
 import { useContacts } from '../hooks/useContacts'
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -33,6 +33,7 @@ export default function Schedule() {
   const { labels: savedLabels, loading: labelsLoading, saveLabels } = useScheduleLabels()
   const { user } = useAuth()
   const { allContacts, ftssContacts } = useContacts()
+  const { data: timeOffRequests } = useTimeOffRequests()
   const canEdit = user?.role === 'manager' || user?.role === 'supervisor'
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [modalCell, setModalCell] = useState(null)
@@ -47,6 +48,10 @@ export default function Schedule() {
   const hoverTimerRef = useRef(null)
   const fileInputRef = useRef(null)
   const modalRef = useRef(null)
+  const [generatePermission, setGeneratePermission] = useState(() => {
+    try { return localStorage.getItem('ftss-schedule-generate-perm') === 'true' } catch { return false }
+  })
+  const [generating, setGenerating] = useState(false)
   const [recentContacts, setRecentContacts] = useState(() => {
     try { return JSON.parse(localStorage.getItem('ftss-schedule-recent') || '[]') } catch { return [] }
   })
@@ -300,6 +305,74 @@ export default function Schedule() {
     e.target.value = ''
   }
 
+  const handleGenerate = async () => {
+    if (!generatePermission) {
+      const ok = window.confirm('Generate a full week schedule automatically? This will replace all current entries for the visible week with randomized FTSS driver and helper assignments. This only asks once — future clicks will generate immediately.')
+      if (!ok) return
+      localStorage.setItem('ftss-schedule-generate-perm', 'true')
+      setGeneratePermission(true)
+    }
+
+    setGenerating(true)
+    try {
+      // Clear existing entries for the visible week
+      const weekDateStrs = weekDates.map(d => format(d, 'yyyy-MM-dd'))
+      await deleteScheduleEntriesForDates(weekDateStrs)
+
+      // Get approved time-off contact IDs per date
+      const approvedOff = timeOffRequests.filter(r => r.status === 'approved')
+      const offByDate = {}
+      for (const d of weekDateStrs) offByDate[d] = new Set()
+      for (const req of approvedOff) {
+        for (const d of weekDateStrs) {
+          if (d >= req.startDate && d <= req.endDate) {
+            offByDate[d].add(req.contactId)
+          }
+        }
+      }
+
+      // Build shuffled roster per day
+      const shuffled = (arr) => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]] }; return a }
+
+      for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+        const dateStr = weekDateStrs[dayIdx]
+        const unavailable = offByDate[dateStr] || new Set()
+        const available = ftssContacts.filter(c => !unavailable.has(c.id))
+        if (available.length === 0) continue
+
+        // Assign each label row a driver and helper
+        const driverPool = shuffled(available)
+        const helperPool = shuffled(available)
+
+        for (let rowIdx = 0; rowIdx < rowLabels.length; rowIdx++) {
+          const label = rowLabels[rowIdx].toLowerCase()
+          // Skip non-route rows (request offs, notes)
+          if (label.includes('request') || label.includes('note')) continue
+
+          const driver = driverPool[rowIdx % driverPool.length]
+          const helper = helperPool[(rowIdx + 3) % helperPool.length]
+
+          if (driver) {
+            await addScheduleEntry({
+              date: dateStr, row: rowIdx, role: 'driver',
+              contactId: driver.id, contactName: driver.name,
+              phone: driver.phones[0]?.number || '', note: '',
+            })
+          }
+          if (helper && helper.id !== driver?.id) {
+            await addScheduleEntry({
+              date: dateStr, row: rowIdx, role: 'helper',
+              contactId: helper.id, contactName: helper.name,
+              phone: helper.phones[0]?.number || '', note: '',
+            })
+          }
+        }
+      }
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   return (
     <>
       <div className="page-header">
@@ -332,6 +405,15 @@ export default function Schedule() {
               <Upload size={16} />
             </button>
             <input ref={fileInputRef} type="file" accept=".csv" hidden onChange={importCSV} />
+            <button
+              className="btn btn-primary"
+              style={{ marginLeft: '8px', fontSize: '12px', opacity: generating ? 0.6 : 1 }}
+              onClick={handleGenerate}
+              disabled={generating || !canEdit}
+              title="Auto-generate schedule for this week"
+            >
+              {generating ? 'Generating...' : 'Generate'}
+            </button>
           </div>
         </div>
       </div>
