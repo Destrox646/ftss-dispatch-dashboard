@@ -171,7 +171,8 @@ export default function Contacts() {
                   <th>Phone</th>
                   <th>Email</th>
                   <th>Organization</th>
-                  {isManager && <th style={{ width: '80px' }}></th>}
+                  {isManager && <th style={{ width: '48px' }}></th>}
+                  {isManager && <th style={{ width: '48px' }}></th>}
                 </tr>
               </thead>
               <tbody>
@@ -237,29 +238,31 @@ export default function Contacts() {
                       )}
                     </td>
                     {isManager && (
-                      <td>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          {tab === 'deleted' ? (
-                            <button className="btn btn-sm btn-primary" onClick={() => handleRestoreContact(c)} title="Restore">
-                              Restore
-                            </button>
-                          ) : (
-                            <>
-                              <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)} title="Edit">
-                                <Pencil size={14} />
-                              </button>
-                              <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteContact(c)} title="Delete" style={{ color: 'var(--danger, #ef4444)' }}>
-                                <Trash2 size={14} />
-                              </button>
-                            </>
-                          )}
-                        </div>
+                      <td style={{ textAlign: 'center' }}>
+                        {tab === 'deleted' ? (
+                          <button className="btn btn-sm btn-primary" onClick={() => handleRestoreContact(c)} title="Restore">
+                            Restore
+                          </button>
+                        ) : (
+                          <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)} title="Edit">
+                            <Pencil size={14} />
+                          </button>
+                        )}
+                      </td>
+                    )}
+                    {isManager && (
+                      <td style={{ textAlign: 'center' }}>
+                        {tab !== 'deleted' && (
+                          <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteContact(c)} title="Delete" style={{ color: 'var(--danger, #ef4444)' }}>
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </td>
                     )}
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan="4" className="table-empty">{tab === 'deleted' ? 'No deleted contacts' : 'No contacts found'}</td></tr>
+                  <tr><td colSpan={isManager ? 6 : 4} className="table-empty">{tab === 'deleted' ? 'No deleted contacts' : 'No contacts found'}</td></tr>
                 )}
               </tbody>
             </table>
