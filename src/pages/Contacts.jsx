@@ -5,9 +5,10 @@ import { useContacts } from '../hooks/useContacts'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Contacts() {
+  const [tab, setTab] = useState('active')
   const [search, setSearch] = useState('')
   const { avatars, setAvatar } = useContactAvatars()
-  const { ftssContacts, addContact, editContact, deleteContact } = useContacts()
+  const { ftssContacts, allContacts, addContact, editContact, deleteContact } = useContacts()
   const { user } = useAuth()
   const isManager = user?.role === 'manager'
   const avatarInputRef = useRef(null)
@@ -22,17 +23,21 @@ export default function Contacts() {
   const [editEmail, setEditEmail] = useState('')
   const [editOrg, setEditOrg] = useState('')
 
+  const allFtss = useMemo(() => allContacts.filter(c => c.name.toUpperCase().startsWith('FTSS')), [allContacts])
+
   const filtered = useMemo(() => {
-    const visible = ftssContacts.filter(c => !c._deleted)
-    if (!search.trim()) return visible.slice(0, 50)
+    const pool = tab === 'deleted' ? allFtss.filter(c => c._deleted) : ftssContacts.filter(c => !c._deleted)
+    if (!search.trim()) return pool.slice(0, tab === 'deleted' ? 100 : 50)
     const q = search.toLowerCase()
-    return visible.filter(c =>
+    return pool.filter(c =>
       c.name.toLowerCase().includes(q) ||
       c.email.toLowerCase().includes(q) ||
       c.organization.toLowerCase().includes(q) ||
       c.phones.some(p => p.number.includes(q))
     ).slice(0, 100)
-  }, [search, ftssContacts])
+  }, [search, ftssContacts, allFtss, tab])
+
+  const deletedCount = allFtss.filter(c => c._deleted).length
 
   const getInitials = (first, last) => {
     return `${(first[0] || '').toUpperCase()}${(last[0] || '').toUpperCase()}` || '?'
@@ -96,6 +101,10 @@ export default function Contacts() {
     deleteContact(c.id)
   }
 
+  const handleRestoreContact = (c) => {
+    editContact(c.id, { _deleted: false })
+  }
+
   const handleAvatarFileChange = (e) => {
     const file = e.target.files?.[0]
     if (!file || !editingContactId) return
@@ -116,13 +125,21 @@ export default function Contacts() {
             <h2>Contacts</h2>
             <p>{ftssContacts.length.toLocaleString()} FTSS contacts</p>
           </div>
-          <button className="btn btn-primary" onClick={() => setShowAdd(true)} style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
-            <Plus size={16} /> Add Contact
-          </button>
+          {tab === 'active' && (
+            <button className="btn btn-primary" onClick={() => setShowAdd(true)} style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
+              <Plus size={16} /> Add Contact
+            </button>
+          )}
         </div>
       </div>
       <div className="page-body">
         <div className="filter-bar">
+          <div className="tabs">
+            <button className={`tab ${tab === 'active' ? 'active' : ''}`} onClick={() => { setTab('active'); setSearch('') }}>Active</button>
+            <button className={`tab ${tab === 'deleted' ? 'active' : ''}`} onClick={() => { setTab('deleted'); setSearch('') }}>
+              Deleted{deletedCount > 0 ? ` (${deletedCount})` : ''}
+            </button>
+          </div>
           <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
             <Search size={16} style={{
               position: 'absolute',
@@ -141,7 +158,7 @@ export default function Contacts() {
             />
           </div>
           <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            {search ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''}` : 'Showing first 50'}
+            {search ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''}` : `Showing ${filtered.length}`}
           </span>
         </div>
 
@@ -222,19 +239,27 @@ export default function Contacts() {
                     {isManager && (
                       <td>
                         <div style={{ display: 'flex', gap: '6px' }}>
-                          <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)} title="Edit">
-                            <Pencil size={14} />
-                          </button>
-                          <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteContact(c)} title="Delete" style={{ color: 'var(--danger, #ef4444)' }}>
-                            <Trash2 size={14} />
-                          </button>
+                          {tab === 'deleted' ? (
+                            <button className="btn btn-sm btn-primary" onClick={() => handleRestoreContact(c)} title="Restore">
+                              Restore
+                            </button>
+                          ) : (
+                            <>
+                              <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)} title="Edit">
+                                <Pencil size={14} />
+                              </button>
+                              <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteContact(c)} title="Delete" style={{ color: 'var(--danger, #ef4444)' }}>
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     )}
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan="4" className="table-empty">No contacts found</td></tr>
+                  <tr><td colSpan="4" className="table-empty">{tab === 'deleted' ? 'No deleted contacts' : 'No contacts found'}</td></tr>
                 )}
               </tbody>
             </table>
