@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, X, ChevronLeft, ChevronRight, Search, Users, Download, Upload } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
-import { useScheduleEntries, useScheduleLabels, addScheduleEntry, deleteScheduleEntry, deleteScheduleEntriesForDates, deleteAllScheduleEntries, useTimeOffRequests } from '../hooks/useFirestore'
+import { useScheduleEntries, useScheduleLabels, addScheduleEntry, deleteScheduleEntry, deleteScheduleEntriesForDates, useTimeOffRequests } from '../hooks/useFirestore'
 import { useAuth } from '../contexts/AuthContext'
 import { useContacts } from '../hooks/useContacts'
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -314,10 +314,11 @@ export default function Schedule() {
     e.target.value = ''
   }
 
-  const handleClearAll = async () => {
-    const ok = window.confirm('Clear ALL schedule entries? This removes every assignment across all weeks.')
+  const handleClearWeek = async () => {
+    const weekDateStrs = weekDates.map(d => format(d, 'yyyy-MM-dd'))
+    const ok = window.confirm(`Clear all schedule entries for the week of ${format(weekStart, 'MMM d')} — ${format(addDays(weekStart, 6), 'MMM d')}?`)
     if (!ok) return
-    await deleteAllScheduleEntries()
+    await deleteScheduleEntriesForDates(weekDateStrs)
   }
 
   const handleGenerate = async () => {
@@ -432,11 +433,11 @@ export default function Schedule() {
             <button
               className="btn btn-ghost"
               style={{ marginLeft: '4px', fontSize: '12px', color: 'var(--red)' }}
-              onClick={handleClearAll}
+              onClick={handleClearWeek}
               disabled={!canEdit}
-              title="Clear all schedule entries"
+              title="Clear all entries for the visible week"
             >
-              Clear All
+              Clear Week
             </button>
           </div>
         </div>
