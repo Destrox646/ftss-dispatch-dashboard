@@ -171,8 +171,7 @@ export default function Contacts() {
                   <th>Phone</th>
                   <th>Email</th>
                   <th>Organization</th>
-                  <th style={{ width: '48px' }}></th>
-                  <th style={{ width: '48px' }}></th>
+                  <th style={{ width: '120px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -238,27 +237,27 @@ export default function Contacts() {
                       )}
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      {tab === 'deleted' ? (
-                        <button className="btn btn-sm btn-primary" onClick={() => handleRestoreContact(c)} title="Restore">
-                          Restore
-                        </button>
-                      ) : (
-                        <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)} title="Edit">
-                          <Pencil size={14} />
-                        </button>
-                      )}
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      {tab !== 'deleted' && (
-                        <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteContact(c)} title="Delete" style={{ color: 'var(--danger, #ef4444)' }}>
-                          <Trash2 size={14} />
-                        </button>
-                      )}
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                        {tab === 'deleted' ? (
+                          <button className="btn btn-sm btn-primary" onClick={() => handleRestoreContact(c)} title="Restore">
+                            Restore
+                          </button>
+                        ) : (
+                          <>
+                            <button className="btn btn-sm btn-ghost" onClick={() => openEdit(c)} title="Edit" style={{ color: 'var(--accent)', borderColor: 'var(--accent)' }}>
+                              <Pencil size={14} /> Edit
+                            </button>
+                            <button className="btn btn-sm btn-ghost" onClick={() => handleDeleteContact(c)} title="Delete" style={{ color: '#ef4444', borderColor: '#ef4444' }}>
+                              <Trash2 size={14} /> Del
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={6} className="table-empty">{tab === 'deleted' ? 'No deleted contacts' : 'No contacts found'}</td></tr>
+                  <tr><td colSpan={5} className="table-empty">{tab === 'deleted' ? 'No deleted contacts' : 'No contacts found'}</td></tr>
                 )}
               </tbody>
             </table>
