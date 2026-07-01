@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { collection, onSnapshot, addDoc, updateDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore'
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 
 // Generic hook for real-time collection sync
@@ -46,5 +46,25 @@ export async function addTimeOffRequest(req) {
 
 export async function updateTimeOffStatus(id, status) {
   await updateDoc(doc(db, 'timeOffRequests', id), { status })
+}
+
+// Schedule entries
+export function useScheduleEntries() {
+  return useCollection('scheduleEntries')
+}
+
+export async function addScheduleEntry(entry) {
+  await addDoc(collection(db, 'scheduleEntries'), entry)
+}
+
+export async function deleteScheduleEntry(id) {
+  await deleteDoc(doc(db, 'scheduleEntries', id))
+}
+
+export async function deleteScheduleEntriesForDates(dateStrs) {
+  const { getDocs } = await import('firebase/firestore')
+  const snap = await getDocs(collection(db, 'scheduleEntries'))
+  const toDelete = snap.docs.filter(d => dateStrs.includes(d.data().date))
+  await Promise.all(toDelete.map(d => deleteDoc(doc(db, 'scheduleEntries', d.id))))
 }
 
