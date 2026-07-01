@@ -125,7 +125,7 @@ export default function Contacts() {
             <h2>Contacts</h2>
             <p>{ftssContacts.length.toLocaleString()} FTSS contacts</p>
           </div>
-          {tab === 'active' && (
+          {tab === 'active' && isManager && (
             <button className="btn btn-primary" onClick={() => setShowAdd(true)} style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
               <Plus size={16} /> Add Contact
             </button>
@@ -171,8 +171,8 @@ export default function Contacts() {
                   <th>Phone</th>
                   <th>Email</th>
                   <th>Organization</th>
-                  {isManager && <th style={{ width: '48px' }}></th>}
-                  {isManager && <th style={{ width: '48px' }}></th>}
+                  <th style={{ width: '48px' }}></th>
+                  <th style={{ width: '48px' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -237,32 +237,28 @@ export default function Contacts() {
                         <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
                       )}
                     </td>
-                    {isManager && (
-                      <td style={{ textAlign: 'center' }}>
-                        {tab === 'deleted' ? (
-                          <button className="btn btn-sm btn-primary" onClick={() => handleRestoreContact(c)} title="Restore">
-                            Restore
-                          </button>
-                        ) : (
-                          <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)} title="Edit">
-                            <Pencil size={14} />
-                          </button>
-                        )}
-                      </td>
-                    )}
-                    {isManager && (
-                      <td style={{ textAlign: 'center' }}>
-                        {tab !== 'deleted' && (
-                          <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteContact(c)} title="Delete" style={{ color: 'var(--danger, #ef4444)' }}>
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </td>
-                    )}
+                    <td style={{ textAlign: 'center' }}>
+                      {tab === 'deleted' ? (
+                        <button className="btn btn-sm btn-primary" onClick={() => handleRestoreContact(c)} title="Restore">
+                          Restore
+                        </button>
+                      ) : (
+                        <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)} title="Edit">
+                          <Pencil size={14} />
+                        </button>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      {tab !== 'deleted' && (
+                        <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteContact(c)} title="Delete" style={{ color: 'var(--danger, #ef4444)' }}>
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={isManager ? 6 : 4} className="table-empty">{tab === 'deleted' ? 'No deleted contacts' : 'No contacts found'}</td></tr>
+                  <tr><td colSpan={6} className="table-empty">{tab === 'deleted' ? 'No deleted contacts' : 'No contacts found'}</td></tr>
                 )}
               </tbody>
             </table>
