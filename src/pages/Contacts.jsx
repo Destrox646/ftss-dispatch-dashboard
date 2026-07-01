@@ -125,7 +125,7 @@ export default function Contacts() {
             <h2>Contacts</h2>
             <p>{ftssContacts.length.toLocaleString()} FTSS contacts</p>
           </div>
-          {tab === 'active' && isManager && (
+          {isManager && (
             <button className="btn btn-primary" onClick={() => setShowAdd(true)} style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
               <Plus size={16} /> Add Contact
             </button>
