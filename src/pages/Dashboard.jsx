@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Users, MessageSquare, ChevronRight } from 'lucide-react'
+import { Users, MessageSquare, ChevronRight, CalendarDays } from 'lucide-react'
 import { format } from 'date-fns'
 import { useContacts } from '../hooks/useContacts'
 import { useAuth } from '../contexts/AuthContext'
@@ -9,6 +9,7 @@ import { useTimeOffRequests } from '../hooks/useFirestore'
 
 const QUICK_LINKS = [
   { label: 'FTSS Group Chat', path: '/chat', icon: MessageSquare, color: '#8b5cf6' },
+  { label: 'Schedule', path: '/schedule', icon: CalendarDays, color: '#3b82f6' },
   { label: 'Browse Contacts', path: '/contacts', icon: Users, color: '#10b981' },
 ]
 
