@@ -9,6 +9,7 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 const DEFAULT_LABELS = [
   'RXO Minooka 1',
   'IFS Waukesha 1', 'IFS Waukesha 2',
+  'JB Hunt Milwaukee 1', 'JB Hunt Milwaukee 2',
   'JB Hunt Appleton 1', 'JB Hunt Appleton 2', 'JB Hunt Appleton 3', 'JB Hunt Appleton 4',
   'JB Hunt Detroit 1', 'RXO Grand Rapids 1',
   'JB Hunt Des Moines 1', 'JB Hunt Des Moines 2',
