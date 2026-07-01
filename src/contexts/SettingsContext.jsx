@@ -9,7 +9,6 @@ const DEFAULTS = {
   accentColor: '#3b82f6',
   dashboardSubtitle: 'Dispatch Dashboard',
   greetingOverride: '',
-  scheduleEditEnabled: false,
   logoImage: '',
 }
 

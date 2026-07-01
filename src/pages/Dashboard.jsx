@@ -1,15 +1,13 @@
 import { useMemo } from 'react'
-import { Calendar, Users, MessageSquare, ChevronRight } from 'lucide-react'
-import { format, startOfWeek, addDays, isToday } from 'date-fns'
+import { Users, MessageSquare, ChevronRight } from 'lucide-react'
+import { format } from 'date-fns'
 import { useContacts } from '../hooks/useContacts'
 import { useAuth } from '../contexts/AuthContext'
 import { useSettings } from '../contexts/SettingsContext'
 import { useChatMessages } from '../hooks/useFirestore'
-import { useScheduleEntries } from '../hooks/useFirestore'
 import { useTimeOffRequests } from '../hooks/useFirestore'
 
 const QUICK_LINKS = [
-  { label: 'View Schedule', path: '/schedule', icon: Calendar, color: 'var(--accent)' },
   { label: 'FTSS Group Chat', path: '/chat', icon: MessageSquare, color: '#8b5cf6' },
   { label: 'Browse Contacts', path: '/contacts', icon: Users, color: '#10b981' },
 ]
@@ -19,14 +17,9 @@ export default function Dashboard() {
   const { settings } = useSettings()
   const { ftssContacts } = useContacts()
   const { data: messages } = useChatMessages()
-  const { data: entries } = useScheduleEntries()
   const { data: requests } = useTimeOffRequests()
 
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-
   const pendingRequests = requests.filter(r => r.status === 'pending').length
-  const todayEntries = entries.filter(e => e.date === format(new Date(), 'yyyy-MM-dd')).length
   const recentMessages = messages.slice(-3).reverse()
 
   const now = new Date()
@@ -54,11 +47,7 @@ export default function Dashboard() {
           {/* Stats Card */}
           <div className="card">
             <div className="card-header"><h3>Today's Overview</h3></div>
-            <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--accent)' }}>{todayEntries}</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Assignments</div>
-              </div>
+            <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--yellow)' }}>{pendingRequests}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Pending Off</div>
@@ -97,39 +86,6 @@ export default function Dashboard() {
                   <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
                 </a>
               ))}
-            </div>
-          </div>
-
-          {/* This Week */}
-          <div className="card">
-            <div className="card-header">
-              <h3>This Week</h3>
-              <a href="/schedule" style={{ fontSize: '13px', color: 'var(--accent)', textDecoration: 'none' }}>View schedule &rarr;</a>
-            </div>
-            <div className="card-body">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
-                {weekDays.map(day => {
-                  const today = isToday(day)
-                  return (
-                    <div key={day.toISOString()} style={{
-                      textAlign: 'center', padding: '10px 4px',
-                      borderRadius: 'var(--radius-sm)',
-                      background: today ? 'var(--accent)' : 'var(--bg-tertiary)',
-                      border: today ? 'none' : '1px solid var(--border)',
-                    }}>
-                      <div style={{
-                        fontSize: '10px', fontWeight: 600, textTransform: 'uppercase',
-                        color: today ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)',
-                        letterSpacing: '0.05em',
-                      }}>{format(day, 'EEE')}</div>
-                      <div style={{
-                        fontSize: '20px', fontWeight: 700, marginTop: '2px',
-                        color: today ? 'white' : 'var(--text-primary)',
-                      }}>{format(day, 'd')}</div>
-                    </div>
-                  )
-                })}
-              </div>
             </div>
           </div>
 

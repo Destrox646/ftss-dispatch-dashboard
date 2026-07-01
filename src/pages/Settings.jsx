@@ -211,9 +211,9 @@ export default function Settings() {
               <div className="card-header"><h3><Shield size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />User Roles</h3></div>
               <div className="card-body">
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                  <strong>Manager</strong> — Full access: edit schedule, approve time off, manage contacts & roles<br />
-                  <strong>Supervisor</strong> — Edit schedule, approve time off, send messages<br />
-                  <strong>Worker</strong> — View schedule, submit time off requests, send messages
+                  <strong>Manager</strong> — Full access: approve time off, manage contacts & roles<br />
+                  <strong>Supervisor</strong> — Approve time off, send messages<br />
+                  <strong>Worker</strong> — Submit time off requests, send messages
                 </div>
                 {usersLoading ? (
                   <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Loading users...</div>

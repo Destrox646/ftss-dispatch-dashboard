@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { collection, onSnapshot, addDoc, deleteDoc, updateDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore'
+import { collection, onSnapshot, addDoc, updateDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 
 // Generic hook for real-time collection sync
@@ -18,31 +18,6 @@ function useCollection(collectionName, orderField = null) {
   }, [collectionName, orderField])
 
   return { data, loading }
-}
-
-// Schedule entries — shared across all users
-export function useScheduleEntries() {
-  return useCollection('scheduleEntries')
-}
-
-export function useScheduleLabels() {
-  const [labels, setLabels] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'scheduleLabels'), (snap) => {
-      setLabels(snap.exists() ? snap.data().labels : null)
-      setLoading(false)
-    })
-    return unsub
-  }, [])
-
-  const saveLabels = async (newLabels) => {
-    const { setDoc } = await import('firebase/firestore')
-    await setDoc(doc(db, 'settings', 'scheduleLabels'), { labels: newLabels })
-  }
-
-  return { labels, loading, saveLabels }
 }
 
 // Chat messages
@@ -73,24 +48,3 @@ export async function updateTimeOffStatus(id, status) {
   await updateDoc(doc(db, 'timeOffRequests', id), { status })
 }
 
-// Schedule entries CRUD
-export async function addScheduleEntry(entry) {
-  await addDoc(collection(db, 'scheduleEntries'), entry)
-}
-
-export async function deleteScheduleEntry(id) {
-  await deleteDoc(doc(db, 'scheduleEntries', id))
-}
-
-export async function deleteScheduleEntriesForDates(dateStrs) {
-  const { getDocs } = await import('firebase/firestore')
-  const snap = await getDocs(collection(db, 'scheduleEntries'))
-  const toDelete = snap.docs.filter(d => dateStrs.includes(d.data().date))
-  await Promise.all(toDelete.map(d => deleteDoc(doc(db, 'scheduleEntries', d.id))))
-}
-
-export async function deleteAllScheduleEntries() {
-  const { getDocs } = await import('firebase/firestore')
-  const snap = await getDocs(collection(db, 'scheduleEntries'))
-  await Promise.all(snap.docs.map(d => deleteDoc(doc(db, 'scheduleEntries', d.id))))
-}
