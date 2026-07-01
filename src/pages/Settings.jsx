@@ -3,7 +3,8 @@ import { useSettings } from '../contexts/SettingsContext'
 import { useAuth } from '../contexts/AuthContext'
 import { httpsCallable } from 'firebase/functions'
 import { functions } from '../firebase'
-import { Save, Building2, User, Palette, Shield } from 'lucide-react'
+import { Save, Building2, User, Palette, Shield, Users } from 'lucide-react'
+import { useContacts } from '../hooks/useContacts'
 
 const ACCENT_PRESETS = [
   { label: 'Blue', value: '#3b82f6' },
@@ -18,6 +19,7 @@ const ACCENT_PRESETS = [
 export default function Settings() {
   const { settings, updateSettings } = useSettings()
   const { user } = useAuth()
+  const { ftssContacts, editContact } = useContacts()
   const isManager = user?.role === 'manager'
   const [companyName, setCompanyName] = useState(settings.companyName)
   const [logoInitials, setLogoInitials] = useState(settings.logoInitials)
@@ -207,57 +209,104 @@ export default function Settings() {
           </div>
 
           {isManager && (
-            <div className="card" style={{ marginBottom: '20px' }}>
-              <div className="card-header"><h3><Shield size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />User Roles</h3></div>
-              <div className="card-body">
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                  <strong>Manager</strong> — Full access: approve time off, manage contacts & roles<br />
-                  <strong>Supervisor</strong> — Approve time off, send messages<br />
-                  <strong>Worker</strong> — Submit time off requests, send messages
+            <>
+              <div className="card" style={{ marginBottom: '20px' }}>
+                <div className="card-header"><h3><Shield size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />User Roles</h3></div>
+                <div className="card-body">
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                    <strong>Manager</strong> — Full access: approve time off, manage contacts & roles<br />
+                    <strong>Supervisor</strong> — Approve time off, send messages<br />
+                    <strong>Worker</strong> — Submit time off requests, send messages
+                  </div>
+                  {usersLoading ? (
+                    <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Loading users...</div>
+                  ) : (
+                    <div className="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Role</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {users.map(u => (
+                            <tr key={u.id}>
+                              <td style={{ fontWeight: 500 }}>{u.name || '—'}</td>
+                              <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{u.phone}</td>
+                              <td>
+                                <select
+                                  value={u.role || 'worker'}
+                                  onChange={e => handleRoleChange(u.id, e.target.value)}
+                                  style={{
+                                    padding: '6px 10px', borderRadius: '6px',
+                                    border: '1px solid var(--border)', background: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer',
+                                  }}
+                                >
+                                  <option value="worker">Worker</option>
+                                  <option value="supervisor">Supervisor</option>
+                                  <option value="manager">Manager</option>
+                                </select>
+                              </td>
+                            </tr>
+                          ))}
+                          {users.length === 0 && (
+                            <tr><td colSpan="3" className="table-empty">No users found</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
-                {usersLoading ? (
-                  <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Loading users...</div>
-                ) : (
-                  <div className="table-wrap">
+              </div>
+
+              <div className="card" style={{ marginBottom: '20px' }}>
+                <div className="card-header"><h3><Users size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />Contact Roles</h3></div>
+                <div className="card-body">
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                    Assign roles to FTSS contacts. This affects how contacts appear throughout the app.
+                  </div>
+                  <div className="table-wrap" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                     <table>
                       <thead>
                         <tr>
-                          <th>Name</th>
-                          <th>Phone</th>
+                          <th>Contact</th>
                           <th>Role</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {users.map(u => (
-                          <tr key={u.id}>
-                            <td style={{ fontWeight: 500 }}>{u.name || '—'}</td>
-                            <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{u.phone}</td>
+                        {ftssContacts.map(c => (
+                          <tr key={c.id}>
+                            <td style={{ fontWeight: 500 }}>{c.name.replace(/^FTSS\s*/i, '')}</td>
                             <td>
                               <select
-                                value={u.role || 'worker'}
-                                onChange={e => handleRoleChange(u.id, e.target.value)}
+                                value={c.role || ''}
+                                onChange={e => editContact(c.id, { role: e.target.value || null })}
                                 style={{
                                   padding: '6px 10px', borderRadius: '6px',
                                   border: '1px solid var(--border)', background: 'var(--bg-primary)',
                                   color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer',
                                 }}
                               >
-                                <option value="worker">Worker</option>
+                                <option value="">No Role</option>
+                                <option value="driver">Driver</option>
+                                <option value="helper">Helper</option>
                                 <option value="supervisor">Supervisor</option>
-                                <option value="manager">Manager</option>
                               </select>
                             </td>
                           </tr>
                         ))}
-                        {users.length === 0 && (
-                          <tr><td colSpan="3" className="table-empty">No users found</td></tr>
+                        {ftssContacts.length === 0 && (
+                          <tr><td colSpan="2" className="table-empty">No FTSS contacts found</td></tr>
                         )}
                       </tbody>
                     </table>
                   </div>
-                )}
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
