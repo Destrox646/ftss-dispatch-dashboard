@@ -8,12 +8,12 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 
 const DEFAULT_LABELS = [
   'RXO Minooka 1',
-  'IFS Waukesha 1', 'IFS Waukesha 2',
   'JB Hunt Milwaukee 1', 'JB Hunt Milwaukee 2',
   'JB Hunt Appleton 1', 'JB Hunt Appleton 2', 'JB Hunt Appleton 3', 'JB Hunt Appleton 4',
   'JB Hunt Detroit 1', 'RXO Grand Rapids 1',
   'JB Hunt Des Moines 1', 'JB Hunt Des Moines 2',
   'Request offs 1', 'Request offs 2',
+  'Notes 1', 'Notes 2',
 ]
 
 export default function Schedule() {
@@ -164,17 +164,17 @@ export default function Schedule() {
 
         if (rowIdx === -1 || rowIdx >= rowLabels.length) continue
 
-        // Parse names for each day
+        // Parse Monday's name and duplicate across all 7 days
+        const name = (cells[1] || '').trim()
+        if (!name) continue
+
+        // Match against FTSS contacts
+        const lower = name.toLowerCase()
+        let contact = ftssContacts.find(c => c.name.toLowerCase() === lower)
+        if (!contact) contact = ftssContacts.find(c => c.name.toLowerCase().includes(lower) || lower.includes(c.name.toLowerCase().replace(/^ftss\s*/i, '')))
+        if (!contact) continue
+
         for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
-          const name = (cells[dayIdx + 1] || '').trim()
-          if (!name) continue
-
-          // Match against FTSS contacts
-          const lower = name.toLowerCase()
-          let contact = ftssContacts.find(c => c.name.toLowerCase() === lower)
-          if (!contact) contact = ftssContacts.find(c => c.name.toLowerCase().includes(lower) || lower.includes(c.name.toLowerCase().replace(/^ftss\s*/i, '')))
-          if (!contact) continue
-
           addScheduleEntry({
             date: csvDates[dayIdx],
             row: rowIdx,
