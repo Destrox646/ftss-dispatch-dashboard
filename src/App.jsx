@@ -10,6 +10,7 @@ import TimeOff from './pages/TimeOff'
 import Contacts from './pages/Contacts'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
+import VoiceInput from './components/VoiceInput'
 
 function App() {
   const { user, loading, login, logout } = useAuth()
@@ -110,6 +111,7 @@ function App() {
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
+      <VoiceInput />
     </>
   )
 }
