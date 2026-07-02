@@ -235,7 +235,10 @@ export default function Chat() {
         flexShrink: 0,
       }}>
         <div style={{ padding: '16px', borderBottom: '1px solid var(--border)' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '10px' }}>Messages</h3>
+          <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>Messages</h3>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', fontFamily: 'monospace' }}>
+            SMS: (762) 441-4999
+          </div>
           <button onClick={() => openQuickMessage()} className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
             <MessageCircle size={14} /> Quick Message
           </button>
