@@ -11,6 +11,7 @@ export default function Contacts() {
   const { ftssContacts, allContacts, addContact, editContact, deleteContact } = useContacts()
   const { user } = useAuth()
   const isManager = user?.role === 'manager'
+  const canManage = user?.role === 'manager' || user?.role === 'supervisor'
   const avatarInputRef = useRef(null)
   const [editingContactId, setEditingContactId] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
@@ -125,9 +126,11 @@ export default function Contacts() {
             <h2>Contacts</h2>
             <p>{ftssContacts.length.toLocaleString()} FTSS contacts</p>
           </div>
+          {canManage && (
           <button className="btn btn-primary" onClick={() => setShowAdd(true)} style={{ gap: '6px', display: 'flex', alignItems: 'center' }}>
             <Plus size={16} /> Add Contact
           </button>
+          )}
         </div>
       </div>
       <div className="page-body">
@@ -238,7 +241,7 @@ export default function Contacts() {
                     )}
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                        {tab === 'deleted' ? (
+                        {canManage && (tab === 'deleted' ? (
                           <button className="btn btn-sm btn-primary" onClick={() => handleRestoreContact(c)} title="Restore">
                             Restore
                           </button>
@@ -251,7 +254,7 @@ export default function Contacts() {
                               <Trash2 size={14} /> Del
                             </button>
                           </>
-                        )}
+                        ))}
                       </div>
                     </td>
                   </tr>
