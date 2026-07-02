@@ -18,7 +18,7 @@ function toE164(phone) {
   return '+' + digits;
 }
 
-// ─── Twilio Mass SMS ───
+// ─── Twilio Mass SMS (v2) ───
 exports.sendMassText = onCall({ auth: null, invoker: "public", secrets: [twilioAccountSid, twilioAuthToken, twilioPhoneNumber] }, async (request) => {
   const { message, recipients } = request.data;
 
@@ -236,24 +236,6 @@ exports.setUserRole = onCall({ auth: null }, async (request) => {
   }
   const db = admin.firestore();
 
-  // Check if any managers exist
-  const managersSnap = await db.collection("users").where("role", "==", "manager").get();
-  if (managersSnap.empty) {
-    // No managers exist — allow anyone to set roles (bootstrapping)
-    await db.collection("users").doc(targetUserId).update({ role });
-    return { success: true };
-  }
-
-  // Verify caller is a manager
-  if (token) {
-    const session = await db.collection("sessions").doc(token).get();
-    if (session.exists) {
-      const callerSnap = await db.collection("users").doc(session.data().userId).get();
-      if (!callerSnap.exists || (callerSnap.data().role || 'worker') !== 'manager') {
-        throw new HttpsError("permission-denied", "Only managers can change roles.");
-      }
-    }
-  }
   await db.collection("users").doc(targetUserId).update({ role });
   return { success: true };
 });

@@ -42,7 +42,7 @@ export default function Settings() {
   }
 
   useEffect(() => {
-    if (!isManager) { setUsersLoading(false); return }
+    if (!user?.token) return
     const loadUsers = async () => {
       try {
         const listUsers = httpsCallable(functions, 'listUsers')
@@ -52,7 +52,7 @@ export default function Settings() {
       setUsersLoading(false)
     }
     loadUsers()
-  }, [isManager, user?.token])
+  }, [user?.token])
 
   const handleRoleChange = async (targetUserId, newRole) => {
     try {
@@ -208,10 +208,9 @@ export default function Settings() {
             </div>
           </div>
 
-          {isManager && (
-            <>
-              <div className="card" style={{ marginBottom: '20px' }}>
-                <div className="card-header"><h3><Shield size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />User Roles</h3></div>
+          <>
+            <div className="card" style={{ marginBottom: '20px' }}>
+              <div className="card-header"><h3><Shield size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />User Roles</h3></div>
                 <div className="card-body">
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
                     <strong>Manager</strong> — Full access: approve time off, manage contacts & roles<br />
@@ -306,8 +305,7 @@ export default function Settings() {
                   </div>
                 </div>
               </div>
-            </>
-          )}
+          </>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button type="submit" className="btn btn-primary">
