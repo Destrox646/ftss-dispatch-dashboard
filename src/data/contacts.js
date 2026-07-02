@@ -13976,20 +13976,6 @@ export const contacts = [
     "organization": ""
   },
   {
-    "id": "c1006",
-    "firstName": "FTSS Alex",
-    "lastName": "Wade",
-    "name": "FTSS Alex Wade",
-    "email": "",
-    "phones": [
-      {
-        "label": "Main",
-        "number": "+1-414-217-8377"
-      }
-    ],
-    "organization": ""
-  },
-  {
     "id": "c1007",
     "firstName": "FTSS Angel",
     "lastName": "Gomez",
