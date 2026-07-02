@@ -10,6 +10,7 @@ const DEFAULTS = {
   dashboardSubtitle: 'Dispatch Dashboard',
   greetingOverride: '',
   logoImage: '',
+  eiaApiKey: '',
 }
 
 function loadSettings() {

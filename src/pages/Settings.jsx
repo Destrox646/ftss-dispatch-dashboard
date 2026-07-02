@@ -3,7 +3,7 @@ import { useSettings } from '../contexts/SettingsContext'
 import { useAuth } from '../contexts/AuthContext'
 import { httpsCallable } from 'firebase/functions'
 import { functions } from '../firebase'
-import { Save, Building2, User, Palette, Shield, Users } from 'lucide-react'
+import { Save, Building2, User, Palette, Shield, Users, Fuel } from 'lucide-react'
 import { useContacts } from '../hooks/useContacts'
 
 const ACCENT_PRESETS = [
@@ -28,6 +28,7 @@ export default function Settings() {
   const [accentColor, setAccentColor] = useState(settings.accentColor)
   const [dashboardSubtitle, setDashboardSubtitle] = useState(settings.dashboardSubtitle)
   const [greetingOverride, setGreetingOverride] = useState(settings.greetingOverride)
+  const [eiaApiKey, setEiaApiKey] = useState(settings.eiaApiKey || '')
   const [saved, setSaved] = useState(false)
   const logoInputRef = useRef(null)
   const [users, setUsers] = useState([])
@@ -118,6 +119,7 @@ export default function Settings() {
       accentColor,
       dashboardSubtitle: dashboardSubtitle.trim() || 'Dispatch Dashboard',
       greetingOverride: greetingOverride.trim(),
+      eiaApiKey: eiaApiKey.trim(),
     })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -247,6 +249,28 @@ export default function Settings() {
                 </div>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', display: 'block' }}>
                   Selected: {accentColor}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="card" style={{ marginBottom: '20px' }}>
+            <div className="card-header"><h3><Fuel size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />Diesel Prices</h3></div>
+            <div className="card-body">
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>EIA API Key</label>
+                <input
+                  type="text"
+                  value={eiaApiKey}
+                  onChange={e => setEiaApiKey(e.target.value)}
+                  placeholder="Enter your free EIA API key"
+                />
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                  Free key from{' '}
+                  <a href="https://www.eia.gov/opendata/register.php" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+                    eia.gov/opendata
+                  </a>
+                  {' '}— shows weekly diesel prices by region on the Dashboard.
                 </span>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Users, MessageSquare, ChevronRight, CalendarDays, CloudSun, Thermometer, Droplets, Wind } from 'lucide-react'
+import { Users, MessageSquare, ChevronRight, CalendarDays, Droplets, Wind, Fuel } from 'lucide-react'
 import { format } from 'date-fns'
 import { useContacts } from '../hooks/useContacts'
 import { useAuth } from '../contexts/AuthContext'
@@ -24,6 +24,8 @@ export default function Dashboard() {
   const recentMessages = messages.slice(-3).reverse()
 
   const [weather, setWeather] = useState(null)
+  const [dieselPrices, setDieselPrices] = useState([])
+  const [dieselError, setDieselError] = useState(null)
 
   useEffect(() => {
     if (!navigator.geolocation) return
@@ -48,6 +50,41 @@ export default function Dashboard() {
       () => {}
     )
   }, [])
+
+  useEffect(() => {
+    const apiKey = settings.eiaApiKey
+    if (!apiKey) return
+    const fetchDiesel = async () => {
+      try {
+        const res = await fetch(
+          `https://api.eia.gov/v2/petroleum/pri/gnd/data/?api_key=${apiKey}&frequency=weekly&data[0]=value&facets[product][]=EMD&sort[0][column]=period&sort[0][direction]=desc&length=500`
+        )
+        const json = await res.json()
+        const rows = json?.response?.data
+        if (!rows || rows.length === 0) {
+          setDieselError('No diesel data available')
+          return
+        }
+        // Group by region name, keep most recent
+        const byRegion = {}
+        for (const row of rows) {
+          const region = row['duoarea-name'] || row.duoarea || ''
+          if (!region || region === 'U.S.' || region.includes('PADD')) continue
+          if (!byRegion[region]) {
+            byRegion[region] = { region, price: parseFloat(row.value), period: row.period }
+          }
+        }
+        const regions = Object.values(byRegion)
+          .filter(r => !isNaN(r.price))
+          .sort((a, b) => b.price - a.price)
+          .slice(0, 8)
+        setDieselPrices(regions)
+      } catch {
+        setDieselError('Failed to load diesel prices')
+      }
+    }
+    fetchDiesel()
+  }, [settings.eiaApiKey])
 
   const now = new Date()
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'
@@ -144,6 +181,52 @@ export default function Dashboard() {
                   <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
                 </a>
               ))}
+            </div>
+          </div>
+
+          {/* Diesel Prices */}
+          <div className="card" style={{ gridColumn: '1 / -1' }}>
+            <div className="card-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Fuel size={18} style={{ color: '#f59e0b' }} />
+                <h3>Diesel Prices by Region</h3>
+              </div>
+              {dieselPrices.length > 0 && (
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>EIA Weekly Avg</span>
+              )}
+            </div>
+            <div className="card-body">
+              {!settings.eiaApiKey ? (
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '16px' }}>
+                  Add your free EIA API key in{' '}
+                  <a href="/settings" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Settings</a>{' '}
+                  to see diesel prices.{' '}
+                  <a href="https://www.eia.gov/opendata/register.php" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: '12px' }}>Get key &rarr;</a>
+                </p>
+              ) : dieselError ? (
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '16px' }}>{dieselError}</p>
+              ) : dieselPrices.length === 0 ? (
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '16px' }}>Loading diesel prices...</p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
+                  {dieselPrices.map((r, i) => (
+                    <div key={r.region} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '10px 14px', borderRadius: '8px',
+                      background: i === 0 ? 'rgba(239, 68, 68, 0.08)' : i === dieselPrices.length - 1 ? 'rgba(34, 197, 94, 0.08)' : 'var(--bg-tertiary)',
+                      border: i === 0 ? '1px solid rgba(239, 68, 68, 0.15)' : i === dieselPrices.length - 1 ? '1px solid rgba(34, 197, 94, 0.15)' : '1px solid transparent',
+                    }}>
+                      <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '8px' }}>{r.region}</span>
+                      <span style={{
+                        fontSize: '14px', fontWeight: 700, fontFamily: 'monospace', flexShrink: 0,
+                        color: i === 0 ? '#ef4444' : i === dieselPrices.length - 1 ? '#22c55e' : 'var(--text-primary)',
+                      }}>
+                        ${r.price.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
