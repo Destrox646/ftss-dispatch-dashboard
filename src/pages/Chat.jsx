@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, Users, ChevronDown, ChevronRight, Radio, X, Search, CheckCircle, MessageCircle, Plus, Hash } from 'lucide-react'
+import { Send, Users, ChevronDown, ChevronRight, Radio, X, Search, CheckCircle, MessageCircle, Plus, Hash, Inbox } from 'lucide-react'
 import { format } from 'date-fns'
 import { useChatMessages, sendMessage } from '../hooks/useFirestore'
 import { useAuth } from '../contexts/AuthContext'
@@ -123,11 +123,13 @@ export default function Chat() {
 
   const activeInfo = activeChannel === 'ftss'
     ? ftssGroup
-    : activeGroup
-      ? { ...activeGroup, type: 'group' }
-      : activeChannel.startsWith('direct-')
-        ? { id: activeChannel, name: topContacts.find(c => `direct-${c.id}` === activeChannel)?.name || 'Contact', type: 'direct' }
-        : ftssGroup
+    : activeChannel === 'sms-incoming'
+      ? { id: 'sms-incoming', name: 'SMS Inbox', type: 'direct' }
+      : activeGroup
+        ? { ...activeGroup, type: 'group' }
+        : activeChannel.startsWith('direct-')
+          ? { id: activeChannel, name: topContacts.find(c => `direct-${c.id}` === activeChannel)?.name || ftssContacts.find(c => `direct-${c.id}` === activeChannel)?.name || 'Contact', type: 'direct' }
+          : ftssGroup
 
   const handleSend = async (e) => {
     e.preventDefault()
@@ -185,7 +187,7 @@ export default function Chat() {
       const sendMassText = httpsCallable(functions, 'sendMassText')
       const result = (await sendMassText({
         message: messageText,
-        recipients: [{ name: quickRecipient.name, phone: quickRecipient.phones[0].number }],
+        recipients: [{ name: quickRecipient.name, phone: quickRecipient.phones[0].number, contactId: quickRecipient.id }],
       })).data
       setQuickResult(result)
     } catch (err) {
@@ -273,6 +275,28 @@ export default function Chat() {
           })}
           {topContacts.length === 0 && (
             <div style={{ padding: '8px 28px', fontSize: '12px', color: 'var(--text-muted)' }}>No recent contacts</div>
+          )}
+
+          {/* SMS Inbox - incoming replies from unmatched numbers */}
+          {messages.some(m => m.channel === 'sms-incoming') && (
+            <button
+              onClick={() => setActiveChannel('sms-incoming')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+                padding: '8px 16px 8px 28px', background: activeChannel === 'sms-incoming' ? 'var(--bg-tertiary)' : 'none',
+                border: 'none', cursor: 'pointer', transition: 'background 0.15s',
+                borderLeft: activeChannel === 'sms-incoming' ? '3px solid var(--accent)' : '3px solid transparent',
+              }}
+            >
+              <Inbox size={16} style={{ color: activeChannel === 'sms-incoming' ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0 }} />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <span style={{
+                  fontSize: '14px', fontWeight: activeChannel === 'sms-incoming' ? 600 : 400,
+                  color: activeChannel === 'sms-incoming' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                }}>SMS Inbox</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Incoming replies</span>
+              </div>
+            </button>
           )}
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', padding: '0 16px 0 0' }}>
@@ -633,7 +657,7 @@ export default function Chat() {
                 const selected = ftssContacts.filter(c => selectedRecipients.has(c.id))
                 const smsRecipients = selected
                   .filter(c => c.phones && c.phones.length > 0)
-                  .map(c => ({ name: c.name, phone: c.phones[0].number }))
+                  .map(c => ({ name: c.name, phone: c.phones[0].number, contactId: c.id }))
                 let smsResult = null
                 if (smsRecipients.length > 0) {
                   try {

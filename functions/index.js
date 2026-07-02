@@ -1,4 +1,4 @@
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const twilio = require("twilio");
@@ -28,6 +28,7 @@ exports.sendMassText = onCall({ auth: null, invoker: "public", secrets: [twilioA
 
   const client = twilio(twilioAccountSid.value(), twilioAuthToken.value());
   const from = twilioPhoneNumber.value();
+  const db = admin.firestore();
 
   const results = [];
   const errors = [];
@@ -40,12 +41,22 @@ exports.sendMassText = onCall({ auth: null, invoker: "public", secrets: [twilioA
         to: toE164(recipient.phone),
       });
       results.push({ phone: recipient.phone, sid: result.sid, status: result.status });
+
+      // Store phone-to-contact mapping so incoming replies can be matched
+      if (recipient.contactId) {
+        await db.collection("phoneDirectory").doc(toE164(recipient.phone)).set({
+          contactId: recipient.contactId,
+          contactName: recipient.name || '',
+          phone: toE164(recipient.phone),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
     } catch (err) {
       errors.push({ phone: recipient.phone, error: err.message });
     }
   }
 
-  await admin.firestore().collection("smsLogs").add({
+  await db.collection("smsLogs").add({
     message,
     recipientCount: recipients.length,
     successCount: results.length,
@@ -56,6 +67,62 @@ exports.sendMassText = onCall({ auth: null, invoker: "public", secrets: [twilioA
   });
 
   return { success: results.length, failed: errors.length, errors };
+});
+
+// ─── Twilio Incoming SMS Webhook ───
+exports.incomingSMS = onRequest({ auth: null, invoker: "public" }, async (req, res) => {
+  try {
+    const from = req.body.From;
+    const body = req.body.Body;
+
+    if (!from || !body) {
+      res.status(400).send("Missing From or Body");
+      return;
+    }
+
+    const db = admin.firestore();
+    const normalizedFrom = toE164(from);
+
+    // Look up the contact from the phone directory
+    const dirDoc = await db.collection("phoneDirectory").doc(normalizedFrom).get();
+    let contactId = null;
+    let contactName = normalizedFrom;
+
+    if (dirDoc.exists) {
+      const dirData = dirDoc.data();
+      contactId = dirData.contactId;
+      contactName = dirData.contactName || normalizedFrom;
+    }
+
+    // Build the channel name - use direct-{contactId} if we know the contact, otherwise 'sms-incoming'
+    const channel = contactId ? `direct-${contactId}` : 'sms-incoming';
+
+    // Write the incoming message to Firestore messages collection
+    await db.collection("messages").add({
+      senderId: contactId || normalizedFrom,
+      senderName: contactName,
+      senderAvatar: contactName
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(part => part[0]?.toUpperCase())
+        .join('') || 'SMS',
+      text: body,
+      channel,
+      direct: true,
+      recipientId: 'ftss',
+      recipientName: 'FTSS',
+      source: 'twilio',
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Respond with empty TwiML (no auto-reply)
+    res.set("Content-Type", "text/xml");
+    res.send('<Response></Response>');
+  } catch (err) {
+    console.error("incomingSMS error:", err);
+    res.status(500).send("Error processing message");
+  }
 });
 
 // ─── Auth: Register ───
@@ -237,6 +304,70 @@ exports.setUserRole = onCall({ auth: null }, async (request) => {
   const db = admin.firestore();
 
   await db.collection("users").doc(targetUserId).update({ role });
+  return { success: true };
+});
+
+// ─── Role Upgrade Requests ───
+exports.requestRoleUpgrade = onCall({ auth: null }, async (request) => {
+  const { userId, currentRole, requestedRole } = request.data;
+  if (!userId || !currentRole || !requestedRole) {
+    throw new HttpsError("invalid-argument", "userId, currentRole, and requestedRole are required.");
+  }
+  const validUpgrade = (currentRole === 'worker' && requestedRole === 'supervisor') || (currentRole === 'supervisor' && requestedRole === 'manager');
+  if (!validUpgrade) {
+    throw new HttpsError("invalid-argument", "Workers can apply for supervisor, supervisors can apply for manager.");
+  }
+  const db = admin.firestore();
+
+  // Check for existing pending request
+  const existing = await db.collection("roleRequests").where("userId", "==", userId).where("status", "==", "pending").get();
+  if (!existing.empty) {
+    throw new HttpsError("already-exists", "You already have a pending request.");
+  }
+
+  await db.collection("roleRequests").add({
+    userId,
+    currentRole,
+    requestedRole,
+    status: 'pending',
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return { success: true };
+});
+
+exports.listRoleRequests = onCall({ auth: null }, async (request) => {
+  const db = admin.firestore();
+  const snap = await db.collection("roleRequests").where("status", "==", "pending").get();
+  const requests = [];
+  for (const doc of snap.docs) {
+    const data = doc.data();
+    // Fetch user name
+    const userDoc = await db.collection("users").doc(data.userId).get();
+    const userName = userDoc.exists ? (userDoc.data().name || '') : '';
+    requests.push({ id: doc.id, ...data, userName });
+  }
+  return { requests };
+});
+
+exports.handleRoleRequest = onCall({ auth: null }, async (request) => {
+  const { requestId, action } = request.data;
+  if (!requestId || !['approve', 'deny'].includes(action)) {
+    throw new HttpsError("invalid-argument", "requestId and action (approve/deny) are required.");
+  }
+  const db = admin.firestore();
+  const reqDoc = await db.collection("roleRequests").doc(requestId).get();
+  if (!reqDoc.exists) {
+    throw new HttpsError("not-found", "Request not found.");
+  }
+  const reqData = reqDoc.data();
+  if (reqData.status !== 'pending') {
+    throw new HttpsError("failed-precondition", "Request already handled.");
+  }
+
+  if (action === 'approve') {
+    await db.collection("users").doc(reqData.userId).update({ role: reqData.requestedRole });
+  }
+  await db.collection("roleRequests").doc(requestId).update({ status: action === 'approve' ? 'approved' : 'denied' });
   return { success: true };
 });
 exports.logoutUser = onCall({ auth: null }, async (request) => {
