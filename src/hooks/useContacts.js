@@ -39,10 +39,16 @@ export function useContacts() {
     return unsub
   }, [])
 
+  const seen = new Set()
   const allContacts = [...staticContacts, ...customContacts].map(c => ({
     ...c,
     ...(overrides[c.id] || {}),
-  }))
+  })).filter(c => {
+    const key = c.name?.toLowerCase().trim()
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 
   const ftssContacts = allContacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
 
