@@ -123,7 +123,7 @@ export default function Dashboard() {
           {/* Stats Card */}
           <div className="card">
             <div className="card-header"><h3>Today's Overview</h3></div>
-            <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="card-body dashboard-stats-grid">
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--yellow)' }}>{pendingRequests}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Pending Off</div>
