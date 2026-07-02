@@ -1,10 +1,15 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const twilio = require("twilio");
 const bcrypt = require("bcryptjs");
 const { v4: uuidv4 } = require("uuid");
 
 admin.initializeApp();
+
+const twilioAccountSid = defineSecret("TWILIO_ACCOUNT_SID");
+const twilioAuthToken = defineSecret("TWILIO_AUTH_TOKEN");
+const twilioPhoneNumber = defineSecret("TWILIO_PHONE_NUMBER");
 
 function toE164(phone) {
   const digits = phone.replace(/\D/g, '');
@@ -14,15 +19,15 @@ function toE164(phone) {
 }
 
 // ─── Twilio Mass SMS ───
-exports.sendMassText = onCall({ auth: null }, async (request) => {
+exports.sendMassText = onCall({ auth: null, secrets: [twilioAccountSid, twilioAuthToken, twilioPhoneNumber] }, async (request) => {
   const { message, recipients } = request.data;
 
   if (!message || !recipients || !Array.isArray(recipients) || recipients.length === 0) {
     throw new HttpsError("invalid-argument", "Message and recipients are required.");
   }
 
-  const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-  const from = process.env.TWILIO_PHONE_NUMBER;
+  const client = twilio(twilioAccountSid.value(), twilioAuthToken.value());
+  const from = twilioPhoneNumber.value();
 
   const results = [];
   const errors = [];
