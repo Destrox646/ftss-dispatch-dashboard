@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
-import { MessageSquare, ClipboardList, Calendar, LayoutDashboard, Users, Settings as SettingsIcon, LogOut } from 'lucide-react'
+import { MessageSquare, ClipboardList, Calendar, LayoutDashboard, Users, Settings as SettingsIcon, LogOut, DollarSign } from 'lucide-react'
 import { useAuth } from './contexts/AuthContext'
 import { useSettings } from './contexts/SettingsContext'
 import Dashboard from './pages/Dashboard'
@@ -9,6 +9,7 @@ import Schedule from './pages/Schedule'
 import TimeOff from './pages/TimeOff'
 import Contacts from './pages/Contacts'
 import Settings from './pages/Settings'
+import Financials from './pages/Financials'
 import Login from './pages/Login'
 import VoiceInput from './components/VoiceInput'
 
@@ -81,6 +82,10 @@ function App() {
             <Users />
             Contacts
           </NavLink>
+          <NavLink to="/financials" className={({ isActive }) => isActive ? 'active' : ''}>
+            <DollarSign />
+            Financials
+          </NavLink>
           <NavLink to="/settings" className={({ isActive }) => isActive ? 'active' : ''}>
             <SettingsIcon />
             Settings
@@ -108,6 +113,7 @@ function App() {
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/time-off" element={<TimeOff />} />
           <Route path="/contacts" element={<Contacts />} />
+          <Route path="/financials" element={<Financials />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
