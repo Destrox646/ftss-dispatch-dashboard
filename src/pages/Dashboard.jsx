@@ -119,7 +119,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div className="dashboard-grid">
           {/* Stats Card */}
           <div className="card">
             <div className="card-header"><h3>Today's Overview</h3></div>

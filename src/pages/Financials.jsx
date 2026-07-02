@@ -228,7 +228,7 @@ export default function Financials() {
                     </div>
 
                     {/* Name */}
-                    <div style={{ width: '150px', fontSize: '13px', color: isSelected ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isSelected ? 600 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0, transition: 'color 0.2s ease' }}>
+                    <div className="financial-bar-name" style={{ width: '150px', fontSize: '13px', color: isSelected ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isSelected ? 600 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0, transition: 'color 0.2s ease' }}>
                       {row.name.replace(/^FTSS\s*/i, '')}
                     </div>
 
@@ -247,7 +247,7 @@ export default function Financials() {
                     </div>
 
                     {/* Value */}
-                    <div style={{ width: '80px', fontSize: '13px', color: isSelected ? 'var(--accent)' : 'var(--text-primary)', fontFamily: 'monospace', fontWeight: 600, flexShrink: 0, textAlign: 'right', transition: 'color 0.2s ease' }}>
+                    <div className="financial-bar-value" style={{ width: '80px', fontSize: '13px', color: isSelected ? 'var(--accent)' : 'var(--text-primary)', fontFamily: 'monospace', fontWeight: 600, flexShrink: 0, textAlign: 'right', transition: 'color 0.2s ease' }}>
                       {chartMode === 'cost' && row.totalCost > 0 ? `$${row.totalCost.toLocaleString()}` : `${row.count} shifts`}
                     </div>
                   </div>

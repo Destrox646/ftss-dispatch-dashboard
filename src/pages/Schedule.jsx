@@ -198,11 +198,11 @@ export default function Schedule() {
             <h2>Schedule</h2>
             <p>Click a cell to assign a driver or helper</p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="schedule-header-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button className="btn btn-ghost" onClick={() => setWeekStart(d => subWeeks(d, 1))}>
               <ChevronLeft size={16} />
             </button>
-            <span style={{ fontSize: '14px', fontWeight: 600, minWidth: '200px', textAlign: 'center' }}>
+            <span className="schedule-date-label" style={{ fontSize: '14px', fontWeight: 600, minWidth: '200px', textAlign: 'center' }}>
               {format(weekStart, 'MMM d')} — {format(addDays(weekStart, 6), 'MMM d, yyyy')}
             </span>
             <button className="btn btn-ghost" onClick={() => setWeekStart(d => addWeeks(d, 1))}>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
-import { MessageSquare, ClipboardList, Calendar, LayoutDashboard, Users, Settings as SettingsIcon, LogOut, DollarSign } from 'lucide-react'
+import { MessageSquare, ClipboardList, Calendar, LayoutDashboard, Users, Settings as SettingsIcon, LogOut, DollarSign, Menu, X } from 'lucide-react'
 import { useAuth } from './contexts/AuthContext'
 import { useSettings } from './contexts/SettingsContext'
 import Dashboard from './pages/Dashboard'
@@ -16,6 +16,7 @@ import VoiceInput from './components/VoiceInput'
 function App() {
   const { user, loading, login, logout } = useAuth()
   const { settings } = useSettings()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const accentRgba = (alpha) => {
     const hex = settings.accentColor.replace('#', '')
@@ -49,7 +50,11 @@ function App() {
           --accent-light: ${accentRgba(0.15)};
         }
       `}</style>
-      <aside className="sidebar">
+      <button className="mobile-menu-btn" onClick={() => setSidebarOpen(o => !o)}>
+        {sidebarOpen ? <X /> : <Menu />}
+      </button>
+      <div className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`} onClick={() => setSidebarOpen(false)} />
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-logo">
           {settings.logoImage ? (
             <img src={settings.logoImage} alt="Logo" className="sidebar-logo-icon" style={{ objectFit: 'cover' }} />
@@ -61,7 +66,7 @@ function App() {
             <span>{settings.dashboardSubtitle}</span>
           </div>
         </div>
-        <nav className="sidebar-nav">
+        <nav className="sidebar-nav" onClick={() => setSidebarOpen(false)}>
           <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'active' : ''}>
             <LayoutDashboard />
             Dashboard

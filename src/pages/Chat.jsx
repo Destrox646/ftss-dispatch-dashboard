@@ -222,9 +222,9 @@ export default function Chat() {
   }
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 60px)' }}>
+    <div className="chat-layout" style={{ display: 'flex', height: 'calc(100vh - 60px)' }}>
       {/* Channel sidebar */}
-      <div style={{
+      <div className="chat-sidebar" style={{
         width: '240px',
         background: 'var(--bg-secondary)',
         borderRight: '1px solid var(--border)',
@@ -381,7 +381,7 @@ export default function Chat() {
 
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 32px' }}>
+            <div className="chat-messages-area" style={{ flex: 1, overflowY: 'auto', padding: '20px 32px' }}>
               {channelMessages.length === 0 && (
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -434,7 +434,7 @@ export default function Chat() {
               <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={handleSend} style={{
+            <form className="chat-input-area" onSubmit={handleSend} style={{
               padding: '16px 32px 24px',
               borderTop: '1px solid var(--border)',
               display: 'flex', gap: '12px',
@@ -462,7 +462,7 @@ export default function Chat() {
             const memberList = activeGroup ? (activeGroup.members || []) : ftssGroup.members
             const memberCount = activeGroup ? (activeGroup.memberCount || memberList.length) : ftssGroup.memberCount
             return (
-            <div style={{
+            <div className="chat-members-panel" style={{
               width: '260px', borderLeft: '1px solid var(--border)',
               background: 'var(--bg-secondary)', overflowY: 'auto',
               flexShrink: 0,

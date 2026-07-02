@@ -96,7 +96,7 @@ export default function TimeOff() {
         </div>
       </div>
       <div className="page-body">
-        <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        <div className="stats-grid timeoff-stats">
           <div className="stat-card">
             <div className="stat-card-icon" style={{ background: 'var(--yellow-light)', color: 'var(--yellow)' }}>
               <Calendar />
