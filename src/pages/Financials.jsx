@@ -121,14 +121,14 @@ export default function Financials() {
           </div>
         </div>
 
-        {/* Interactive Bar Chart */}
+        {/* Ranked Earners List */}
         {chartData.length > 0 && (
           <div className="card" style={{ padding: '20px', marginBottom: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <BarChart3 size={18} style={{ color: 'var(--accent)' }} />
                 <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                  Top Earners by {chartMode === 'cost' ? 'Total Cost' : 'Shifts Worked'}
+                  Highest to Lowest Earners
                 </h3>
               </div>
               {isManager && (
@@ -154,7 +154,7 @@ export default function Financials() {
                 </div>
               )}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', position: 'relative' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', position: 'relative' }}>
               {tooltip && (
                 <div
                   style={{
@@ -186,6 +186,7 @@ export default function Financials() {
                 const value = chartMode === 'cost' ? row.totalCost : row.count
                 const maxValue = chartMode === 'cost' ? maxCost : Math.max(...chartData.map(r => r.count))
                 const pct = maxValue > 0 ? (value / maxValue) * 100 : 0
+                const rankColor = i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7f32' : 'var(--text-muted)'
                 return (
                   <div
                     key={row.id}
@@ -204,32 +205,46 @@ export default function Financials() {
                     }}
                     onMouseLeave={() => setTooltip(null)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: '10px',
+                      display: 'flex', alignItems: 'center', gap: '12px',
                       cursor: 'pointer',
-                      padding: '3px 6px',
-                      borderRadius: '6px',
-                      background: isSelected ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      background: isSelected ? 'rgba(59, 130, 246, 0.08)' : i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)',
                       transition: 'background 0.2s ease',
                     }}
                   >
-                    <div style={{ width: '140px', fontSize: '12px', color: isSelected ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isSelected ? 600 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0, textAlign: 'right', transition: 'color 0.2s ease' }}>
+                    {/* Rank number */}
+                    <div style={{
+                      width: '28px', height: '28px', borderRadius: '6px', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '13px', fontWeight: 700,
+                      background: i < 3 ? `${rankColor}18` : 'var(--bg-tertiary)',
+                      color: rankColor,
+                    }}>
+                      {i + 1}
+                    </div>
+
+                    {/* Name */}
+                    <div style={{ width: '150px', fontSize: '13px', color: isSelected ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isSelected ? 600 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0, transition: 'color 0.2s ease' }}>
                       {row.name.replace(/^FTSS\s*/i, '')}
                     </div>
-                    <div style={{ flex: 1, height: '24px', background: 'var(--bg-tertiary)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+
+                    {/* Bar */}
+                    <div style={{ flex: 1, height: '22px', background: 'var(--bg-tertiary)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
                       <div style={{
                         height: '100%',
                         width: `${pct}%`,
-                        background: isSelected
-                          ? 'var(--accent)'
-                          : i === 0
-                            ? 'var(--accent)'
-                            : `var(--accent)${Math.round(85 - (i * 2.5)).toString().padStart(2, '0')}`,
+                        background: i === 0
+                          ? 'linear-gradient(90deg, var(--accent), #60a5fa)'
+                          : `var(--accent)${Math.round(85 - (i * 2.5)).toString().padStart(2, '0')}`,
                         borderRadius: '4px',
-                        transition: 'width 0.5s ease, background 0.2s ease',
+                        transition: 'width 0.5s ease',
                         minWidth: value > 0 ? '2px' : '0',
                       }} />
                     </div>
-                    <div style={{ width: '70px', fontSize: '12px', color: isSelected ? 'var(--accent)' : 'var(--text-secondary)', fontFamily: 'monospace', fontWeight: isSelected ? 600 : 400, flexShrink: 0, transition: 'color 0.2s ease' }}>
+
+                    {/* Value */}
+                    <div style={{ width: '80px', fontSize: '13px', color: isSelected ? 'var(--accent)' : 'var(--text-primary)', fontFamily: 'monospace', fontWeight: 600, flexShrink: 0, textAlign: 'right', transition: 'color 0.2s ease' }}>
                       {chartMode === 'cost' ? `$${row.totalCost.toLocaleString()}` : `${row.count} shifts`}
                     </div>
                   </div>
