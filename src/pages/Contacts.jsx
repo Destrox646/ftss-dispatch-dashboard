@@ -232,7 +232,7 @@ export default function Contacts() {
                       {c.organization ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <Building2 size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                          <span style={{ fontSize: '13px' }}>{c.organization}</span>
+                          <span style={{ fontSize: '13px' }}>{!isNaN(parseFloat(c.organization)) ? `$${parseFloat(c.organization).toFixed(2)}` : c.organization}</span>
                         </div>
                       ) : (
                         <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
