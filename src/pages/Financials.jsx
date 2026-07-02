@@ -30,6 +30,17 @@ export default function Financials() {
       counts[key].count++
     }
 
+    // Ensure these contacts always show minimum 1 shift/week
+    const alwaysOne = ['charles wagner', 'james tontillo']
+    for (const name of alwaysOne) {
+      const found = Object.values(counts).find(c => c.contactName?.toLowerCase().includes(name))
+      if (found) {
+        found.count = Math.max(found.count, 1)
+      } else {
+        counts[name] = { count: 1, contactName: name.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' '), contactId: null }
+      }
+    }
+
     // Build rows with rate-of-pay
     const rows = []
     for (const key of Object.keys(counts)) {
