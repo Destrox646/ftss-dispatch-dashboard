@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Users, MessageSquare, ChevronRight, CalendarDays } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { Users, MessageSquare, ChevronRight, CalendarDays, CloudSun, Thermometer, Droplets, Wind } from 'lucide-react'
 import { format } from 'date-fns'
 import { useContacts } from '../hooks/useContacts'
 import { useAuth } from '../contexts/AuthContext'
@@ -23,8 +23,46 @@ export default function Dashboard() {
   const pendingRequests = requests.filter(r => r.status === 'pending').length
   const recentMessages = messages.slice(-3).reverse()
 
+  const [weather, setWeather] = useState(null)
+
+  useEffect(() => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords
+          const res = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph`
+          )
+          const data = await res.json()
+          if (data.current) {
+            setWeather({
+              temp: Math.round(data.current.temperature_2m),
+              humidity: data.current.relative_humidity_2m,
+              wind: Math.round(data.current.wind_speed_10m),
+              code: data.current.weather_code,
+            })
+          }
+        } catch {}
+      },
+      () => {}
+    )
+  }, [])
+
   const now = new Date()
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'
+
+  const getWeatherInfo = (code) => {
+    if (code === 0) return { label: 'Clear', icon: '☀️' }
+    if (code <= 3) return { label: 'Cloudy', icon: '☁️' }
+    if (code <= 49) return { label: 'Foggy', icon: '🌫️' }
+    if (code <= 59) return { label: 'Drizzle', icon: '🌦️' }
+    if (code <= 69) return { label: 'Rain', icon: '🌧️' }
+    if (code <= 79) return { label: 'Snow', icon: '❄️' }
+    if (code <= 84) return { label: 'Showers', icon: '🌧️' }
+    if (code <= 94) return { label: 'Snow', icon: '❄️' }
+    return { label: 'Storm', icon: '⛈️' }
+  }
 
   return (
     <>
@@ -57,6 +95,25 @@ export default function Dashboard() {
                 <div style={{ fontSize: '28px', fontWeight: 800, color: '#8b5cf6' }}>{messages.length}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Messages</div>
               </div>
+              {weather && (
+                <div style={{ gridColumn: '1 / -1', padding: '12px', background: 'rgba(59,130,246,0.06)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ fontSize: '36px', lineHeight: 1 }}>{getWeatherInfo(weather.code).icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)' }}>{weather.temp}°F</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{getWeatherInfo(weather.code).label}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <Droplets size={14} style={{ color: '#3b82f6', marginBottom: '2px' }} />
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>{weather.humidity}%</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <Wind size={14} style={{ color: '#64748b', marginBottom: '2px' }} />
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>{weather.wind} mph</div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
