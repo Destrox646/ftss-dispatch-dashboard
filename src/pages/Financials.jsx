@@ -1,10 +1,13 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { DollarSign, TrendingUp, Users, BarChart3 } from 'lucide-react'
 import { useScheduleEntries } from '../hooks/useFirestore'
 import { useContacts } from '../hooks/useContacts'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Financials() {
+  const [chartMode, setChartMode] = useState('cost') // 'cost' or 'shifts'
+  const [selectedBar, setSelectedBar] = useState(null)
+  const [tooltip, setTooltip] = useState(null)
   const { data: entries } = useScheduleEntries()
   const { allContacts } = useContacts()
   const { user } = useAuth()
@@ -118,36 +121,120 @@ export default function Financials() {
           </div>
         </div>
 
-        {/* Bar Chart */}
+        {/* Interactive Bar Chart */}
         {chartData.length > 0 && (
           <div className="card" style={{ padding: '20px', marginBottom: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <BarChart3 size={18} style={{ color: 'var(--accent)' }} />
-              <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                Top Earners by Total Cost
-              </h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <BarChart3 size={18} style={{ color: 'var(--accent)' }} />
+                <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+                  Top Earners by {chartMode === 'cost' ? 'Total Cost' : 'Shifts Worked'}
+                </h3>
+              </div>
+              {isManager && (
+                <div style={{ display: 'flex', background: 'var(--bg-tertiary)', borderRadius: '6px', padding: '2px' }}>
+                  <button
+                    onClick={() => setChartMode('cost')}
+                    style={{
+                      padding: '5px 12px', fontSize: '12px', fontWeight: 500, border: 'none', borderRadius: '4px', cursor: 'pointer',
+                      background: chartMode === 'cost' ? 'var(--accent)' : 'transparent',
+                      color: chartMode === 'cost' ? 'white' : 'var(--text-secondary)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >Cost</button>
+                  <button
+                    onClick={() => setChartMode('shifts')}
+                    style={{
+                      padding: '5px 12px', fontSize: '12px', fontWeight: 500, border: 'none', borderRadius: '4px', cursor: 'pointer',
+                      background: chartMode === 'shifts' ? 'var(--accent)' : 'transparent',
+                      color: chartMode === 'shifts' ? 'white' : 'var(--text-secondary)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >Shifts</button>
+                </div>
+              )}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {chartData.map((row, i) => (
-                <div key={row.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '140px', fontSize: '12px', color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0, textAlign: 'right' }}>
-                    {row.name.replace(/^FTSS\s*/i, '')}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', position: 'relative' }}>
+              {tooltip && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: tooltip.x,
+                    top: tooltip.y - 8,
+                    transform: 'translate(-50%, -100%)',
+                    background: 'var(--bg-primary, #1a1a2e)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    zIndex: 100,
+                    pointerEvents: 'none',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    minWidth: '160px',
+                  }}
+                >
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>{tooltip.name}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    {tooltip.shifts} shift{tooltip.shifts !== 1 ? 's' : ''} × ${tooltip.rate.toFixed(2)}
                   </div>
-                  <div style={{ flex: 1, height: '22px', background: 'var(--bg-tertiary)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
-                    <div style={{
-                      height: '100%',
-                      width: maxCost > 0 ? `${(row.totalCost / maxCost) * 100}%` : '0%',
-                      background: i === 0 ? 'var(--accent)' : `var(--accent)${Math.round(85 - (i * 2.5)).toString().padStart(2, '0')}`,
-                      borderRadius: '4px',
-                      transition: 'width 0.5s ease',
-                      minWidth: row.totalCost > 0 ? '2px' : '0',
-                    }} />
-                  </div>
-                  <div style={{ width: '70px', fontSize: '12px', color: 'var(--text-secondary)', fontFamily: 'monospace', flexShrink: 0 }}>
-                    {isManager ? `$${row.totalCost.toLocaleString()}` : `${row.count} shifts`}
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent)', marginTop: '2px' }}>
+                    ${tooltip.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
-              ))}
+              )}
+              {chartData.map((row, i) => {
+                const isSelected = selectedBar === row.id
+                const value = chartMode === 'cost' ? row.totalCost : row.count
+                const maxValue = chartMode === 'cost' ? maxCost : Math.max(...chartData.map(r => r.count))
+                const pct = maxValue > 0 ? (value / maxValue) * 100 : 0
+                return (
+                  <div
+                    key={row.id}
+                    onClick={() => setSelectedBar(isSelected ? null : row.id)}
+                    onMouseEnter={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect()
+                      const parentRect = e.currentTarget.parentElement.getBoundingClientRect()
+                      setTooltip({
+                        x: rect.left - parentRect.left + rect.width / 2,
+                        y: rect.top - parentRect.top,
+                        name: row.name.replace(/^FTSS\s*/i, ''),
+                        shifts: row.count,
+                        rate: row.rate,
+                        totalCost: row.totalCost,
+                      })
+                    }}
+                    onMouseLeave={() => setTooltip(null)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      cursor: 'pointer',
+                      padding: '3px 6px',
+                      borderRadius: '6px',
+                      background: isSelected ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
+                      transition: 'background 0.2s ease',
+                    }}
+                  >
+                    <div style={{ width: '140px', fontSize: '12px', color: isSelected ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isSelected ? 600 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0, textAlign: 'right', transition: 'color 0.2s ease' }}>
+                      {row.name.replace(/^FTSS\s*/i, '')}
+                    </div>
+                    <div style={{ flex: 1, height: '24px', background: 'var(--bg-tertiary)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${pct}%`,
+                        background: isSelected
+                          ? 'var(--accent)'
+                          : i === 0
+                            ? 'var(--accent)'
+                            : `var(--accent)${Math.round(85 - (i * 2.5)).toString().padStart(2, '0')}`,
+                        borderRadius: '4px',
+                        transition: 'width 0.5s ease, background 0.2s ease',
+                        minWidth: value > 0 ? '2px' : '0',
+                      }} />
+                    </div>
+                    <div style={{ width: '70px', fontSize: '12px', color: isSelected ? 'var(--accent)' : 'var(--text-secondary)', fontFamily: 'monospace', fontWeight: isSelected ? 600 : 400, flexShrink: 0, transition: 'color 0.2s ease' }}>
+                      {chartMode === 'cost' ? `$${row.totalCost.toLocaleString()}` : `${row.count} shifts`}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
