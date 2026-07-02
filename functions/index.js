@@ -19,7 +19,7 @@ function toE164(phone) {
 }
 
 // ─── Twilio Mass SMS ───
-exports.sendMassText = onCall({ auth: null, secrets: [twilioAccountSid, twilioAuthToken, twilioPhoneNumber] }, async (request) => {
+exports.sendMassText = onCall({ auth: null, invoker: "public", secrets: [twilioAccountSid, twilioAuthToken, twilioPhoneNumber] }, async (request) => {
   const { message, recipients } = request.data;
 
   if (!message || !recipients || !Array.isArray(recipients) || recipients.length === 0) {
