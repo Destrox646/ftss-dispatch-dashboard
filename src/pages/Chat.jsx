@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, Users, ChevronDown, ChevronRight, Radio, X, Search, CheckCircle, MessageCircle } from 'lucide-react'
+import { Send, Users, ChevronDown, ChevronRight, Radio, X, Search, CheckCircle, MessageCircle, Plus, Hash } from 'lucide-react'
 import { format } from 'date-fns'
 import { useChatMessages, sendMessage } from '../hooks/useFirestore'
 import { useAuth } from '../contexts/AuthContext'
 import { httpsCallable } from 'firebase/functions'
-import { functions } from '../firebase'
+import { functions, db } from '../firebase'
 import { useContactAvatars } from '../hooks/useContactAvatars'
 import { useContacts } from '../hooks/useContacts'
+import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore'
 
 export default function Chat() {
   const { user } = useAuth()
@@ -26,6 +27,11 @@ export default function Chat() {
   const [showMembers, setShowMembers] = useState(false)
   const [groupsOpen, setGroupsOpen] = useState(true)
   const [broadcastOpen, setBroadcastOpen] = useState(false)
+  const [createGroupOpen, setCreateGroupOpen] = useState(false)
+  const [groupName, setGroupName] = useState('')
+  const [groupMembers, setGroupMembers] = useState(() => new Set())
+  const [groupSearch, setGroupSearch] = useState('')
+  const [customGroups, setCustomGroups] = useState([])
   const [broadcastMsg, setBroadcastMsg] = useState('')
   const [broadcastSearch, setBroadcastSearch] = useState('')
   const [selectedRecipients, setSelectedRecipients] = useState(() => new Set())
@@ -41,6 +47,38 @@ export default function Chat() {
   const [quickResult, setQuickResult] = useState(null)
   const ftssGroup = { id: 'ftss', name: 'FTSS', type: 'group', members: ftssContacts, memberCount: ftssContacts.length }
   const messagesEndRef = useRef(null)
+
+  // Listen for custom groups from Firestore
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'chatGroups'), (snap) => {
+      setCustomGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    })
+    return unsub
+  }, [])
+
+  const handleCreateGroup = async (e) => {
+    e.preventDefault()
+    if (!groupName.trim() || groupMembers.size === 0) return
+    const members = ftssContacts.filter(c => groupMembers.has(c.id))
+    await addDoc(collection(db, 'chatGroups'), {
+      name: groupName.trim(),
+      memberIds: members.map(c => c.id),
+      members: members.map(c => ({ id: c.id, name: c.name, firstName: c.firstName, lastName: c.lastName, phones: c.phones || [] })),
+      memberCount: members.length,
+      createdBy: currentUserId,
+      createdByName: currentUserName,
+      createdAt: serverTimestamp(),
+    })
+    setGroupName('')
+    setGroupMembers(new Set())
+    setGroupSearch('')
+    setCreateGroupOpen(false)
+  }
+
+  const handleDeleteGroup = async (groupId) => {
+    await deleteDoc(doc(db, 'chatGroups', groupId))
+    if (activeChannel === `group-${groupId}`) setActiveChannel('ftss')
+  }
 
   const topContacts = useMemo(() => {
     const counts = {}
@@ -79,11 +117,17 @@ export default function Chat() {
     [messages, activeChannel]
   )
 
+  const activeGroup = activeChannel.startsWith('group-')
+    ? customGroups.find(g => `group-${g.id}` === activeChannel)
+    : null
+
   const activeInfo = activeChannel === 'ftss'
     ? ftssGroup
-    : activeChannel.startsWith('direct-')
-      ? { id: activeChannel, name: topContacts.find(c => `direct-${c.id}` === activeChannel)?.name || 'Contact', type: 'direct' }
-      : ftssGroup
+    : activeGroup
+      ? { ...activeGroup, type: 'group' }
+      : activeChannel.startsWith('direct-')
+        ? { id: activeChannel, name: topContacts.find(c => `direct-${c.id}` === activeChannel)?.name || 'Contact', type: 'direct' }
+        : ftssGroup
 
   const handleSend = async (e) => {
     e.preventDefault()
@@ -231,34 +275,77 @@ export default function Chat() {
             <div style={{ padding: '8px 28px', fontSize: '12px', color: 'var(--text-muted)' }}>No recent contacts</div>
           )}
 
-          <button onClick={() => setGroupsOpen(o => !o)} style={{
-            display: 'flex', alignItems: 'center', gap: '6px', width: '100%',
-            padding: '6px 16px', marginTop: '8px', background: 'none', border: 'none',
-            color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700,
-            textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer',
-          }}>
-            {groupsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            Groups
-          </button>
-          {groupsOpen && (
-            <button
-              onClick={() => setActiveChannel('ftss')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
-                padding: '8px 16px 8px 28px', background: activeChannel === 'ftss' ? 'var(--bg-tertiary)' : 'none',
-                border: 'none', cursor: 'pointer', transition: 'background 0.15s',
-                borderLeft: activeChannel === 'ftss' ? '3px solid var(--accent)' : '3px solid transparent',
-              }}
-            >
-              <Users size={16} style={{ color: activeChannel === 'ftss' ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0 }} />
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <span style={{
-                  fontSize: '14px', fontWeight: activeChannel === 'ftss' ? 600 : 400,
-                  color: activeChannel === 'ftss' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                }}>FTSS</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{ftssGroup.memberCount} members</span>
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', padding: '0 16px 0 0' }}>
+            <button onClick={() => setGroupsOpen(o => !o)} style={{
+              display: 'flex', alignItems: 'center', gap: '6px', width: '100%',
+              padding: '6px 16px', background: 'none', border: 'none',
+              color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700,
+              textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer',
+            }}>
+              {groupsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              Groups
             </button>
+            <button onClick={() => { setCreateGroupOpen(true); setGroupName(''); setGroupMembers(new Set()); setGroupSearch('') }} style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
+              color: 'var(--text-muted)', display: 'flex', borderRadius: '4px',
+            }} title="Create Group">
+              <Plus size={14} />
+            </button>
+          </div>
+          {groupsOpen && (
+            <>
+              <button
+                onClick={() => setActiveChannel('ftss')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+                  padding: '8px 16px 8px 28px', background: activeChannel === 'ftss' ? 'var(--bg-tertiary)' : 'none',
+                  border: 'none', cursor: 'pointer', transition: 'background 0.15s',
+                  borderLeft: activeChannel === 'ftss' ? '3px solid var(--accent)' : '3px solid transparent',
+                }}
+              >
+                <Users size={16} style={{ color: activeChannel === 'ftss' ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0 }} />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <span style={{
+                    fontSize: '14px', fontWeight: activeChannel === 'ftss' ? 600 : 400,
+                    color: activeChannel === 'ftss' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  }}>FTSS</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{ftssGroup.memberCount} members</span>
+                </div>
+              </button>
+              {customGroups.map(g => {
+                const chId = `group-${g.id}`
+                const isActive = activeChannel === chId
+                return (
+                  <div key={g.id} style={{ display: 'flex', alignItems: 'center' }}>
+                    <button
+                      onClick={() => setActiveChannel(chId)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '8px', flex: 1,
+                        padding: '8px 16px 8px 28px', background: isActive ? 'var(--bg-tertiary)' : 'none',
+                        border: 'none', cursor: 'pointer', transition: 'background 0.15s',
+                        borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
+                      }}
+                    >
+                      <Hash size={16} style={{ color: isActive ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0 }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
+                        <span style={{
+                          fontSize: '14px', fontWeight: isActive ? 600 : 400,
+                          color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px',
+                        }}>{g.name}</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{g.memberCount} members</span>
+                      </div>
+                    </button>
+                    <button onClick={() => handleDeleteGroup(g.id)} style={{
+                      background: 'none', border: 'none', cursor: 'pointer', padding: '4px', marginRight: '8px',
+                      color: 'var(--text-muted)', display: 'flex', borderRadius: '4px', opacity: 0.5,
+                    }} title="Delete group">
+                      <X size={12} />
+                    </button>
+                  </div>
+                )
+              })}
+            </>
           )}
         </div>
       </div>
@@ -371,7 +458,10 @@ export default function Chat() {
             </form>
           </div>
 
-          {showMembers && activeInfo.type === 'group' && (
+          {showMembers && activeInfo.type === 'group' && (() => {
+            const memberList = activeGroup ? (activeGroup.members || []) : ftssGroup.members
+            const memberCount = activeGroup ? (activeGroup.memberCount || memberList.length) : ftssGroup.memberCount
+            return (
             <div style={{
               width: '260px', borderLeft: '1px solid var(--border)',
               background: 'var(--bg-secondary)', overflowY: 'auto',
@@ -379,22 +469,22 @@ export default function Chat() {
             }}>
               <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
                 <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Members — {ftssGroup.memberCount}
+                  Members — {memberCount}
                 </h4>
               </div>
-              {ftssGroup.members.map(m => (
+              {memberList.map(m => (
                 <div key={m.id} style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   padding: '8px 16px', borderBottom: '1px solid var(--border)',
                 }}>
-                  {renderAvatar(m.name, (m.firstName[0] || '') + (m.lastName[0] || ''), '28px')}
+                  {renderAvatar(m.name, (m.firstName?.[0] || '') + (m.lastName?.[0] || ''), '28px')}
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
-                    {m.phones[0] && (
+                    {m.phones?.[0] && (
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{m.phones[0].number}</div>
                     )}
                   </div>
-                  {m.phones[0] && (
+                  {m.phones?.[0] && (
                     <button type="button" className="btn btn-primary btn-sm" onClick={() => openQuickMessage(m)}>
                       <Send size={12} />
                     </button>
@@ -402,7 +492,8 @@ export default function Chat() {
                 </div>
               ))}
             </div>
-          )}
+            )
+          })()}
         </div>
       </div>
 
@@ -663,6 +754,99 @@ export default function Chat() {
                 <button type="button" className="btn btn-primary" onClick={() => setBroadcastOpen(false)}>Done</button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Create Group Modal */}
+      {createGroupOpen && (
+        <div className="modal-overlay" onClick={() => setCreateGroupOpen(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Users size={18} style={{ color: 'var(--accent)' }} />
+                Create Group Chat
+              </h3>
+              <button className="modal-close" onClick={() => setCreateGroupOpen(false)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleCreateGroup}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Group Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Night Crew, Atlanta Routes..."
+                    value={groupName}
+                    onChange={e => setGroupName(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Members ({groupMembers.size} selected)</label>
+                  <div style={{ position: 'relative', marginBottom: '8px' }}>
+                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                    <input
+                      type="text"
+                      placeholder="Search contacts..."
+                      value={groupSearch}
+                      onChange={e => setGroupSearch(e.target.value)}
+                      style={{ paddingLeft: '32px', fontSize: '13px', padding: '8px 12px 8px 32px', width: '100%' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                    <button type="button" className="btn btn-sm btn-ghost" onClick={() => setGroupMembers(new Set(ftssContacts.map(c => c.id)))}>Select All</button>
+                    <button type="button" className="btn btn-sm btn-ghost" onClick={() => setGroupMembers(new Set())}>Deselect All</button>
+                  </div>
+                  <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+                    {ftssContacts.filter(c => {
+                      if (!groupSearch.trim()) return true
+                      const q = groupSearch.toLowerCase()
+                      return c.name.toLowerCase().includes(q) || c.phones?.some(p => p.number.includes(q))
+                    }).map(c => {
+                      const checked = groupMembers.has(c.id)
+                      const initials = (c.firstName?.[0] || '') + (c.lastName?.[0] || '')
+                      return (
+                        <label key={c.id} style={{
+                          display: 'flex', alignItems: 'center', gap: '10px',
+                          padding: '8px 12px', cursor: 'pointer',
+                          borderBottom: '1px solid var(--border)',
+                          background: checked ? 'rgba(59,130,246,0.06)' : 'transparent',
+                          transition: 'background 0.1s',
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              setGroupMembers(prev => {
+                                const next = new Set(prev)
+                                if (next.has(c.id)) next.delete(c.id); else next.add(c.id)
+                                return next
+                              })
+                            }}
+                            style={{ accentColor: 'var(--accent)' }}
+                          />
+                          {renderAvatar(c.name, initials, '26px')}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {c.name.replace(/^FTSS\s*/i, '')}
+                            </div>
+                          </div>
+                          {c.phones?.[0] && (
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', flexShrink: 0 }}>{c.phones[0].number}</span>
+                          )}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-ghost" onClick={() => setCreateGroupOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={!groupName.trim() || groupMembers.size === 0}>
+                  <Plus size={14} /> Create Group
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
