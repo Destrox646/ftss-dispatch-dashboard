@@ -8,7 +8,7 @@ import { useChatMessages } from '../hooks/useFirestore'
 import { useTimeOffRequests } from '../hooks/useFirestore'
 
 const QUICK_LINKS = [
-  { label: 'FTSS Group Chat', path: '/chat', icon: MessageSquare, color: '#8b5cf6' },
+  { label: 'Chat', path: '/chat', icon: MessageSquare, color: '#8b5cf6' },
   { label: 'Schedule', path: '/schedule', icon: CalendarDays, color: '#3b82f6' },
   { label: 'Browse Contacts', path: '/contacts', icon: Users, color: '#10b981' },
 ]
