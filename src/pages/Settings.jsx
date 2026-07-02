@@ -32,6 +32,9 @@ export default function Settings() {
   const logoInputRef = useRef(null)
   const [users, setUsers] = useState([])
   const [usersLoading, setUsersLoading] = useState(true)
+  const [roleRequests, setRoleRequests] = useState([])
+  const [requestsLoading, setRequestsLoading] = useState(true)
+  const [applying, setApplying] = useState(false)
 
   const handleLogoImageChange = (e) => {
     const file = e.target.files?.[0]
@@ -53,6 +56,47 @@ export default function Settings() {
     }
     loadUsers()
   }, [user?.token])
+
+  useEffect(() => {
+    if (!user?.token) return
+    const loadRequests = async () => {
+      try {
+        const listRoleRequests = httpsCallable(functions, 'listRoleRequests')
+        const result = await listRoleRequests({ token: user.token })
+        setRoleRequests(result.data.requests || [])
+      } catch { /* ignore */ }
+      setRequestsLoading(false)
+    }
+    loadRequests()
+  }, [user?.token])
+
+  const handleApply = async () => {
+    const requestedRole = user.role === 'worker' ? 'supervisor' : 'manager'
+    setApplying(true)
+    try {
+      const requestRoleUpgrade = httpsCallable(functions, 'requestRoleUpgrade')
+      await requestRoleUpgrade({ userId: user.userId, currentRole: user.role, requestedRole })
+      setRoleRequests(prev => [...prev, { id: 'pending', userId: user.userId, currentRole: user.role, requestedRole, userName: user.name || '', status: 'pending' }])
+      alert('Request submitted! A manager will review it.')
+    } catch (err) {
+      alert(err.message || 'Failed to submit request')
+    }
+    setApplying(false)
+  }
+
+  const handleRoleRequest = async (requestId, action) => {
+    try {
+      const handleReq = httpsCallable(functions, 'handleRoleRequest')
+      await handleReq({ requestId, action })
+      setRoleRequests(prev => prev.filter(r => r.id !== requestId))
+      // Refresh user list to reflect any role changes
+      const listUsers = httpsCallable(functions, 'listUsers')
+      const result = await listUsers({ token: user.token })
+      setUsers(result.data.users || [])
+    } catch (err) {
+      alert(err.message || 'Failed to process request')
+    }
+  }
 
   const handleRoleChange = async (targetUserId, newRole) => {
     try {
@@ -217,6 +261,53 @@ export default function Settings() {
                     <strong>Supervisor</strong> — Approve time off, send messages<br />
                     <strong>Worker</strong> — Submit time off requests, send messages
                   </div>
+
+                  {(user.role === 'worker' || user.role === 'supervisor') && (
+                    <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '13px' }}>
+                          Your role: <strong style={{ textTransform: 'capitalize' }}>{user.role}</strong> — Apply to become <strong>{user.role === 'worker' ? 'Supervisor' : 'Manager'}</strong>
+                        </span>
+                        <button type="button" className="btn btn-primary btn-sm" onClick={handleApply} disabled={applying}>
+                          {applying ? 'Submitting...' : 'Apply Now'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {isManager && !requestsLoading && roleRequests.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px', color: 'var(--text-primary)' }}>Pending Role Requests</div>
+                      <div className="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Current</th>
+                              <th>Requested</th>
+                              <th>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {roleRequests.map(r => (
+                              <tr key={r.id}>
+                                <td style={{ fontWeight: 500 }}>{r.userName || '—'}</td>
+                                <td style={{ fontSize: '13px', textTransform: 'capitalize' }}>{r.currentRole}</td>
+                                <td style={{ fontSize: '13px', textTransform: 'capitalize' }}>{r.requestedRole}</td>
+                                <td>
+                                  <div style={{ display: 'flex', gap: '6px' }}>
+                                    <button type="button" className="btn btn-primary btn-sm" onClick={() => handleRoleRequest(r.id, 'approve')}>Approve</button>
+                                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleRoleRequest(r.id, 'deny')}>Deny</button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
                   {usersLoading ? (
                     <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Loading users...</div>
                   ) : (
