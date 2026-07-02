@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { contacts as staticContacts } from '../data/contacts'
 import { db } from '../firebase'
 import { collection, onSnapshot, doc, setDoc, deleteDoc, getDocs } from 'firebase/firestore'
@@ -39,18 +39,22 @@ export function useContacts() {
     return unsub
   }, [])
 
-  const seen = new Set()
-  const allContacts = [...staticContacts, ...customContacts].map(c => ({
-    ...c,
-    ...(overrides[c.id] || {}),
-  })).filter(c => {
-    const key = c.name?.toLowerCase().trim()
-    if (!key || seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
+  const allContacts = useMemo(() => {
+    const seen = new Set()
+    return [...staticContacts, ...customContacts].map(c => ({
+      ...c,
+      ...(overrides[c.id] || {}),
+    })).filter(c => {
+      const key = c.name?.toLowerCase().trim()
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }, [customContacts, overrides])
 
-  const ftssContacts = allContacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
+  const ftssContacts = useMemo(() => {
+    return allContacts.filter(c => c.name.toUpperCase().startsWith('FTSS'))
+  }, [allContacts])
 
   const addContact = async (contact) => {
     // Save to Firestore
