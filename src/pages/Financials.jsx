@@ -59,8 +59,8 @@ export default function Financials() {
       })
     }
 
-    // Sort by total cost descending
-    rows.sort((a, b) => b.totalCost - a.totalCost)
+    // Sort by total cost descending, fall back to shift count
+    rows.sort((a, b) => b.totalCost - a.totalCost || b.count - a.count)
     return rows
   }, [entries, contactMap])
 
@@ -68,13 +68,14 @@ export default function Financials() {
   const totalCost = financialData.reduce((s, r) => s + r.totalCost, 0)
   const contactsScheduled = financialData.filter(r => r.count > 0).length
   const maxCost = financialData.length > 0 ? financialData[0].totalCost : 0
+  const maxShifts = financialData.length > 0 ? Math.max(...financialData.map(r => r.count)) : 0
 
   const formatCurrency = (v) => {
     if (v >= 1000) return `$${(v / 1000).toFixed(1)}k`
     return `$${v.toFixed(0)}`
   }
 
-  const chartData = financialData.filter(r => r.totalCost > 0).slice(0, 20)
+  const chartData = financialData.filter(r => r.count > 0).slice(0, 20)
 
   return (
     <>
@@ -177,14 +178,14 @@ export default function Financials() {
                     {tooltip.shifts} shift{tooltip.shifts !== 1 ? 's' : ''} × ${tooltip.rate.toFixed(2)}
                   </div>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent)', marginTop: '2px' }}>
-                    ${tooltip.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {tooltip.totalCost > 0 ? `$${tooltip.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${tooltip.shifts} shift${tooltip.shifts !== 1 ? 's' : ''}`}
                   </div>
                 </div>
               )}
               {chartData.map((row, i) => {
                 const isSelected = selectedBar === row.id
                 const value = chartMode === 'cost' ? row.totalCost : row.count
-                const maxValue = chartMode === 'cost' ? maxCost : Math.max(...chartData.map(r => r.count))
+                const maxValue = chartMode === 'cost' ? (maxCost > 0 ? maxCost : maxShifts) : maxShifts
                 const pct = maxValue > 0 ? (value / maxValue) * 100 : 0
                 const rankColor = i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7f32' : 'var(--text-muted)'
                 return (
@@ -245,7 +246,7 @@ export default function Financials() {
 
                     {/* Value */}
                     <div style={{ width: '80px', fontSize: '13px', color: isSelected ? 'var(--accent)' : 'var(--text-primary)', fontFamily: 'monospace', fontWeight: 600, flexShrink: 0, textAlign: 'right', transition: 'color 0.2s ease' }}>
-                      {chartMode === 'cost' ? `$${row.totalCost.toLocaleString()}` : `${row.count} shifts`}
+                      {chartMode === 'cost' && row.totalCost > 0 ? `$${row.totalCost.toLocaleString()}` : `${row.count} shifts`}
                     </div>
                   </div>
                 )
