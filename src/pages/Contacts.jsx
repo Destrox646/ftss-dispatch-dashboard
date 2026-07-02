@@ -2,12 +2,15 @@ import { useState, useMemo, useRef } from 'react'
 import { Search, Phone, Mail, Building2, Camera, Plus, X, Pencil, Trash2 } from 'lucide-react'
 import { useContactAvatars } from '../hooks/useContactAvatars'
 import { useContacts } from '../hooks/useContacts'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function Contacts() {
   const [tab, setTab] = useState('active')
   const [search, setSearch] = useState('')
   const { avatars, setAvatar } = useContactAvatars()
   const { ftssContacts, allContacts, addContact, editContact, deleteContact } = useContacts()
+  const { user } = useAuth()
+  const isManager = user?.role === 'manager'
   const avatarInputRef = useRef(null)
   const [editingContactId, setEditingContactId] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
@@ -146,7 +149,7 @@ export default function Contacts() {
             }} />
             <input
               type="text"
-              placeholder="Search by name, email, phone, or company..."
+              placeholder={isManager ? "Search by name, email, phone, or rate-of-pay..." : "Search by name, email, or phone..."}
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{ paddingLeft: '36px', width: '100%' }}
@@ -165,7 +168,7 @@ export default function Contacts() {
                   <th>Name</th>
                   <th>Phone</th>
                   <th>Email</th>
-                  <th>Organization</th>
+                  {isManager && <th>Rate-of-Pay</th>}
                   <th style={{ width: '120px' }}>Actions</th>
                 </tr>
               </thead>
@@ -221,6 +224,7 @@ export default function Contacts() {
                         <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
                       )}
                     </td>
+                    {isManager && (
                     <td>
                       {c.organization ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -231,6 +235,7 @@ export default function Contacts() {
                         <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
                       )}
                     </td>
+                    )}
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                         {tab === 'deleted' ? (
@@ -252,7 +257,7 @@ export default function Contacts() {
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={5} className="table-empty">{tab === 'deleted' ? 'No deleted contacts' : 'No contacts found'}</td></tr>
+                  <tr><td colSpan={isManager ? 5 : 4} className="table-empty">{tab === 'deleted' ? 'No deleted contacts' : 'No contacts found'}</td></tr>
                 )}
               </tbody>
             </table>
@@ -321,10 +326,12 @@ export default function Contacts() {
                   <label>Email</label>
                   <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} />
                 </div>
+                {isManager && (
                 <div className="form-group">
-                  <label>Organization</label>
+                  <label>Rate-of-Pay</label>
                   <input type="text" value={editOrg} onChange={e => setEditOrg(e.target.value)} />
                 </div>
+                )}
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-ghost" onClick={() => setEditModal(null)}>Cancel</button>
