@@ -61,6 +61,10 @@ export async function deleteScheduleEntry(id) {
   await deleteDoc(doc(db, 'scheduleEntries', id))
 }
 
+export async function toggleScheduleEntryNCNS(id, ncns) {
+  await updateDoc(doc(db, 'scheduleEntries', id), { ncns })
+}
+
 export async function deleteScheduleEntriesForDates(dateStrs) {
   const { getDocs } = await import('firebase/firestore')
   const snap = await getDocs(collection(db, 'scheduleEntries'))

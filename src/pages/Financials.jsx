@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { DollarSign, TrendingUp, Users, BarChart3 } from 'lucide-react'
+import { DollarSign, TrendingUp, AlertTriangle, BarChart3 } from 'lucide-react'
 import { useScheduleEntries } from '../hooks/useFirestore'
 import { useContacts } from '../hooks/useContacts'
 import { useAuth } from '../contexts/AuthContext'
@@ -29,8 +29,9 @@ export default function Financials() {
     for (const entry of entries) {
       const key = entry.contactId || entry.contactName?.toLowerCase()
       if (!key) continue
-      if (!counts[key]) counts[key] = { count: 0, contactName: entry.contactName || 'Unknown', contactId: entry.contactId }
+      if (!counts[key]) counts[key] = { count: 0, ncns: 0, contactName: entry.contactName || 'Unknown', contactId: entry.contactId }
       counts[key].count++
+      if (entry.ncns) counts[key].ncns++
     }
 
     // Ensure these contacts always show minimum 1 shift/week
@@ -54,6 +55,7 @@ export default function Financials() {
         id: info.contactId || key,
         name: info.contactName || 'Unknown',
         count: info.count,
+        ncns: info.ncns,
         rate,
         totalCost: rate * info.count,
       })
@@ -66,7 +68,7 @@ export default function Financials() {
 
   const totalShifts = financialData.reduce((s, r) => s + r.count, 0)
   const totalCost = financialData.reduce((s, r) => s + r.totalCost, 0)
-  const contactsScheduled = financialData.filter(r => r.count > 0).length
+  const ncnsCount = entries.filter(e => e.ncns).length
   const maxCost = financialData.length > 0 ? financialData[0].totalCost : 0
   const maxShifts = financialData.length > 0 ? Math.max(...financialData.map(r => r.count)) : 0
 
@@ -112,12 +114,12 @@ export default function Financials() {
             </div>
           </div>
           <div className="card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(168, 85, 247, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Users size={20} style={{ color: '#a855f7' }} />
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertTriangle size={20} style={{ color: '#ef4444' }} />
             </div>
             <div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Scheduled</div>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)' }}>{contactsScheduled}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>NCNS</div>
+              <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)' }}>{ncnsCount}</div>
             </div>
           </div>
         </div>
@@ -263,6 +265,7 @@ export default function Financials() {
                 <tr>
                   <th>Contact</th>
                   <th>Shifts</th>
+                  <th>NCNS</th>
                   {isManager && <th>Rate-of-Pay</th>}
                   {isManager && <th>Total Cost</th>}
                 </tr>
@@ -277,6 +280,11 @@ export default function Financials() {
                     </td>
                     <td>
                       <span style={{ fontFamily: 'monospace', fontSize: '13px' }}>{row.count}</span>
+                    </td>
+                    <td>
+                      <span style={{ fontFamily: 'monospace', fontSize: '13px', color: row.ncns > 0 ? '#ef4444' : 'var(--text-muted)', fontWeight: row.ncns > 0 ? 600 : 400 }}>
+                        {row.ncns > 0 ? row.ncns : '—'}
+                      </span>
                     </td>
                     {isManager && (
                       <td>

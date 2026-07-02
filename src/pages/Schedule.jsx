@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef } from 'react'
-import { Plus, X, ChevronLeft, ChevronRight, Upload } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Upload, AlertTriangle } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
-import { useScheduleEntries, addScheduleEntry, deleteScheduleEntry, deleteScheduleEntriesForDates } from '../hooks/useFirestore'
+import { useScheduleEntries, addScheduleEntry, deleteScheduleEntry, deleteScheduleEntriesForDates, toggleScheduleEntryNCNS } from '../hooks/useFirestore'
 import { useContacts } from '../hooks/useContacts'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -275,17 +275,23 @@ export default function Schedule() {
 
                 const renderEntry = (entry, role) => (
                   <div key={entry.id} style={{
-                    background: role === 'driver' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(34, 197, 94, 0.12)',
-                    border: `1px solid ${role === 'driver' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,
+                    background: entry.ncns ? 'rgba(239, 68, 68, 0.15)' : role === 'driver' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(34, 197, 94, 0.12)',
+                    border: `1px solid ${entry.ncns ? 'rgba(239, 68, 68, 0.4)' : role === 'driver' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,
                     borderRadius: '4px', padding: '2px 5px',
                     fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px',
                   }} onClick={e => e.stopPropagation()}>
                     <div className={`avatar ${getAvatarColor(entry.contactName)}`} style={{ width: '16px', height: '16px', fontSize: '6px', flexShrink: 0 }}>
                       {getInitials(entry.contactName)}
                     </div>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    <span style={{ color: entry.ncns ? '#ef4444' : 'var(--text-primary)', fontWeight: 500, textDecoration: entry.ncns ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                       {entry.contactName.replace(/^FTSS\s*/i, '')}
                     </span>
+                    <button onClick={(e) => { e.stopPropagation(); toggleScheduleEntryNCNS(entry.id, !entry.ncns); }}
+                      title={entry.ncns ? 'Remove NCNS' : 'Mark NCNS'}
+                      style={{ background: 'none', border: 'none', color: entry.ncns ? '#ef4444' : 'var(--text-muted)', cursor: 'pointer', padding: '0 1px', fontSize: '12px', lineHeight: 1, flexShrink: 0, display: 'flex' }}
+                    >
+                      <AlertTriangle size={10} />
+                    </button>
                     <button onClick={(e) => { e.stopPropagation(); deleteScheduleEntry(entry.id); }}
                       style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0 1px', fontSize: '12px', lineHeight: 1, flexShrink: 0 }}
                     >&times;</button>
