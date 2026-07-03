@@ -230,14 +230,14 @@ export default function Schedule() {
         )}
         <div style={{ minWidth: '900px', opacity: entriesLoading ? 0.4 : 1, transition: 'opacity 0.2s' }}>
           {/* Header row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '158px repeat(7, 1fr)', gap: '1px', marginBottom: '1px' }}>
+          <div className="sched-grid">
             <div style={{ padding: '10px 8px' }} />
             {DAYS.map((day, i) => {
               const d = weekDates[i]
               const isToday = format(d, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
               return (
                 <div key={day} style={{
-                  padding: '10px 12px', textAlign: 'center',
+                  padding: '10px 4px', textAlign: 'center',
                   background: isToday ? 'rgba(59, 130, 246, 0.10)' : 'var(--bg-tertiary)',
                   borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0',
                   border: isToday ? '1px solid var(--accent)' : '1px solid transparent',
@@ -256,14 +256,9 @@ export default function Schedule() {
 
           {/* Schedule rows */}
           {rowLabels.map((label, rowIdx) => (
-            <div key={rowIdx} style={{ display: 'grid', gridTemplateColumns: '158px repeat(7, 1fr)', gap: '1px', marginBottom: '1px' }}>
-              <div style={{
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border)',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                padding: '6px 8px',
-              }}>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'center', lineHeight: '1.3' }}>
+            <div key={rowIdx} className="sched-grid">
+              <div className="sched-label">
+                <div className="sched-label-text">
                   {label}
                 </div>
               </div>
@@ -283,7 +278,7 @@ export default function Schedule() {
                     <div className={`avatar ${getAvatarColor(entry.contactName)}`} style={{ width: '16px', height: '16px', fontSize: '6px', flexShrink: 0 }}>
                       {getInitials(entry.contactName)}
                     </div>
-                    <span style={{ color: entry.ncns ? '#ef4444' : 'var(--text-primary)', fontWeight: 500, textDecoration: entry.ncns ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    <span className="sched-entry-name" style={{ color: entry.ncns ? '#ef4444' : 'var(--text-primary)', textDecoration: entry.ncns ? 'line-through' : 'none' }}>
                       {entry.contactName.replace(/^FTSS\s*/i, '')}
                     </span>
                     <button onClick={(e) => { e.stopPropagation(); toggleScheduleEntryNCNS(entry.id, !entry.ncns); }}
