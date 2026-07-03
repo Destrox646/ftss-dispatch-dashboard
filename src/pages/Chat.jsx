@@ -436,7 +436,9 @@ export default function Chat() {
             <div className="chat-messages-area">
               {channelMessages.length === 0 && (
                 <div className="chat-empty">
-                  {activeInfo.type === 'group' ? <Users size={40} style={{ opacity: 0.3 }} /> : <MessageCircle size={40} style={{ opacity: 0.3 }} />}
+                  <div className="chat-empty-icon">
+                    {activeInfo.type === 'group' ? <Users size={32} /> : <MessageCircle size={32} />}
+                  </div>
                   <p>No messages yet</p>
                   <p>Start the conversation in #{activeInfo.name}</p>
                 </div>
@@ -472,8 +474,8 @@ export default function Chat() {
                 onChange={e => setInput(e.target.value)}
                 placeholder={`Message #${activeInfo.name}...`}
               />
-              <button type="submit" className="btn btn-primary" style={{ padding: '12px 20px' }}>
-                <Send /> Send
+              <button type="submit" className="chat-send-btn" disabled={!input.trim()}>
+                <Send size={18} />
               </button>
             </form>
           </div>
