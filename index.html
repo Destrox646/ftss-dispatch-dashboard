@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Privateer — Media Downloader</title>
-  <meta name="description" content="Download media from 80+ platforms. Trim, convert, compress — all in one desktop app." />
+  <title>Destrox64 — Dispatcher, Privateer &amp; Exitium</title>
+  <meta name="description" content="Three tools built by Destrox64: Dispatcher for trucking logistics, Privateer for media downloading, and Exitium for video processing." />
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
@@ -20,7 +20,9 @@
       --green: #22c55e;
       --green-hover: #16a34a;
       --orange: #f97316;
+      --orange-hover: #ea580c;
     }
+    html { scroll-behavior: smooth; }
     body {
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       background: var(--bg);
@@ -28,58 +30,76 @@
       line-height: 1.6;
       overflow-x: hidden;
     }
-    a { color: var(--blue); text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    a { text-decoration: none; }
 
-    /* ── Nav ── */
-    nav {
-      display: flex; align-items: center; justify-content: space-between;
-      max-width: 1100px; margin: 0 auto; padding: 20px 24px;
+    /* ── Top Nav ── */
+    .topnav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(15,17,23,.85); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
     }
-    .nav-brand { display: flex; align-items: center; gap: 10px; }
-    .nav-brand img { width: 36px; height: 36px; border-radius: 8px; }
-    .nav-brand span { font-size: 20px; font-weight: 700; color: var(--text); }
-    .nav-links { display: flex; gap: 28px; }
-    .nav-links a { color: var(--muted); font-size: 14px; transition: color .2s; }
-    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    .topnav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      max-width: 1100px; margin: 0 auto; padding: 14px 24px;
+    }
+    .topnav-brand {
+      font-size: 18px; font-weight: 800; color: var(--text);
+      letter-spacing: -.5px;
+    }
+    .topnav-links { display: flex; gap: 8px; }
+    .topnav-links a {
+      padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      color: var(--muted); transition: all .2s;
+    }
+    .topnav-links a:hover { color: var(--text); background: var(--surface); }
+    .topnav-links a.active { color: #fff; }
+    .topnav-links a[data-project="dispatcher"].active { background: var(--blue); }
+    .topnav-links a[data-project="privateer"].active { background: var(--green); }
+    .topnav-links a[data-project="exitium"].active { background: var(--orange); }
+
+    /* ── Project Section ── */
+    .project {
+      min-height: 100vh; padding: 100px 24px 80px;
+      display: flex; flex-direction: column; align-items: center;
+    }
 
     /* ── Hero ── */
-    .hero {
-      text-align: center; padding: 80px 24px 60px;
-      max-width: 800px; margin: 0 auto;
-    }
+    .hero { text-align: center; max-width: 760px; margin-bottom: 60px; }
     .hero-badge {
       display: inline-block; background: var(--surface); border: 1px solid var(--border);
       border-radius: 20px; padding: 6px 16px; font-size: 13px; color: var(--muted);
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
     .hero h1 {
-      font-size: clamp(36px, 6vw, 56px); font-weight: 800; line-height: 1.1;
+      font-size: clamp(36px, 6vw, 52px); font-weight: 800; line-height: 1.1;
       margin-bottom: 16px;
-      background: linear-gradient(135deg, var(--text) 0%, var(--blue) 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
     }
-    .hero p {
-      font-size: 18px; color: var(--muted); max-width: 560px; margin: 0 auto 36px;
-    }
-    .hero-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .hero p { font-size: 17px; color: var(--muted); max-width: 540px; margin: 0 auto 32px; }
+    .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
     .btn {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 14px 28px; border-radius: 12px; font-size: 15px; font-weight: 600;
+      padding: 13px 26px; border-radius: 12px; font-size: 14px; font-weight: 600;
       border: none; cursor: pointer; transition: all .2s; text-decoration: none;
     }
-    .btn:hover { text-decoration: none; transform: translateY(-1px); }
-    .btn-primary { background: var(--green); color: #fff; }
-    .btn-primary:hover { background: var(--green-hover); }
-    .btn-secondary {
-      background: var(--surface); color: var(--text); border: 1px solid var(--border);
-    }
+    .btn:hover { transform: translateY(-1px); text-decoration: none; }
+    .btn-primary { color: #fff; }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
     .btn-secondary:hover { background: var(--surface2); border-color: var(--muted); }
 
-    /* ── App Preview ── */
+    /* Color variants for hero text and buttons */
+    .project--dispatcher .hero h1 { color: var(--blue); }
+    .project--privateer .hero h1 { color: var(--green); }
+    .project--exitium .hero h1 { color: var(--orange); }
+    .project--dispatcher .btn-primary { background: var(--blue); }
+    .project--dispatcher .btn-primary:hover { background: var(--blue-hover); }
+    .project--privateer .btn-primary { background: var(--green); }
+    .project--privateer .btn-primary:hover { background: var(--green-hover); }
+    .project--exitium .btn-primary { background: var(--orange); }
+    .project--exitium .btn-primary:hover { background: var(--orange-hover); }
+
+    /* ── Preview Window ── */
     .preview {
-      max-width: 900px; margin: 0 auto 80px; padding: 0 24px;
+      width: 100%; max-width: 900px; margin-bottom: 60px;
     }
     .preview-window {
       background: var(--surface); border: 1px solid var(--border);
@@ -95,126 +115,88 @@
     .preview-dot.y { background: #eab308; }
     .preview-dot.g { background: #22c55e; }
     .preview-bar span { margin-left: 12px; font-size: 12px; color: var(--dim); }
-    .preview-body {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
-      background: var(--border); min-height: 340px;
-    }
-    .preview-left, .preview-right { background: var(--bg); padding: 20px; }
+    .preview-body { padding: 28px; min-height: 260px; }
 
-    /* Mock UI elements */
-    .mock-label { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
-    .mock-input {
-      background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
-      padding: 10px 14px; color: var(--dim); font-size: 13px; margin-bottom: 14px;
+    /* ── Mock UI ── */
+    .mock-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .mock-card {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px;
     }
-    .mock-row { display: flex; gap: 8px; margin-bottom: 14px; }
+    .mock-label { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
+    .mock-value { font-size: 22px; font-weight: 700; }
+    .mock-bar { height: 6px; background: var(--bg); border-radius: 6px; margin-top: 10px; overflow: hidden; }
+    .mock-bar-fill { height: 100%; border-radius: 6px; }
+    .mock-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
     .mock-chip {
-      background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
       padding: 6px 12px; font-size: 12px; color: var(--muted);
     }
-    .mock-chip.active { background: var(--blue); color: #fff; border-color: var(--blue); }
-    .mock-btn {
-      background: var(--green); color: #fff; border: none; border-radius: 10px;
-      padding: 10px 20px; font-size: 13px; font-weight: 600; width: 100%;
+    .mock-chip.active { color: #fff; }
+    .mock-input {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 14px; color: var(--dim); font-size: 13px; margin-bottom: 12px;
     }
-    .mock-progress {
-      height: 4px; background: var(--surface2); border-radius: 4px; margin-top: 14px; overflow: hidden;
-    }
-    .mock-progress-fill { width: 67%; height: 100%; background: var(--blue); border-radius: 4px; }
+    .mock-btn { border: none; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 600; width: 100%; color: #fff; }
+    .mock-progress { height: 4px; background: var(--bg); border-radius: 4px; margin-top: 12px; overflow: hidden; }
+    .mock-progress-fill { height: 100%; border-radius: 4px; }
     .mock-drop {
-      border: 2px dashed var(--blue); border-radius: 14px; padding: 28px;
-      text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 14px;
+      border: 2px dashed var(--border); border-radius: 14px; padding: 24px;
+      text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 12px;
     }
-    .mock-slider {
-      height: 4px; background: var(--surface2); border-radius: 4px; position: relative; margin: 8px 0 14px;
-    }
-    .mock-slider-fill { width: 50%; height: 100%; background: var(--blue); border-radius: 4px; }
-    .mock-slider-dot {
-      width: 12px; height: 12px; background: var(--blue); border-radius: 50%;
-      position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
-    }
+    .mock-slider { height: 4px; background: var(--bg); border-radius: 4px; position: relative; margin: 6px 0 12px; }
+    .mock-slider-fill { height: 100%; border-radius: 4px; }
+    .mock-slider-dot { width: 12px; height: 12px; border-radius: 50%; position: absolute; top: -4px; transform: translateX(-50%); }
+
+    /* Color accents for mock elements */
+    .project--dispatcher .mock-chip.active { background: var(--blue); border-color: var(--blue); }
+    .project--dispatcher .mock-bar-fill, .project--dispatcher .mock-progress-fill { background: var(--blue); }
+    .project--dispatcher .mock-slider-fill, .project--dispatcher .mock-slider-dot { background: var(--blue); }
+    .project--dispatcher .mock-btn { background: var(--blue); }
+    .project--dispatcher .mock-value { color: var(--blue); }
+
+    .project--privateer .mock-chip.active { background: var(--green); border-color: var(--green); }
+    .project--privateer .mock-bar-fill, .project--privateer .mock-progress-fill { background: var(--green); }
+    .project--privateer .mock-slider-fill, .project--privateer .mock-slider-dot { background: var(--green); }
+    .project--privateer .mock-btn { background: var(--green); }
+    .project--privateer .mock-value { color: var(--green); }
+    .project--privateer .mock-drop { border-color: var(--green); }
+
+    .project--exitium .mock-chip.active { background: var(--orange); border-color: var(--orange); }
+    .project--exitium .mock-bar-fill, .project--exitium .mock-progress-fill { background: var(--orange); }
+    .project--exitium .mock-slider-fill, .project--exitium .mock-slider-dot { background: var(--orange); }
+    .project--exitium .mock-btn { background: var(--orange); }
+    .project--exitium .mock-value { color: var(--orange); }
 
     /* ── Features ── */
-    .features {
-      max-width: 1100px; margin: 0 auto 80px; padding: 0 24px;
-    }
-    .features h2 {
-      text-align: center; font-size: 32px; font-weight: 700; margin-bottom: 48px;
-    }
+    .features { width: 100%; max-width: 1100px; margin-bottom: 60px; }
+    .features h2 { text-align: center; font-size: 28px; font-weight: 700; margin-bottom: 36px; }
     .feature-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;
     }
     .feature-card {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-      padding: 28px; transition: border-color .2s;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 24px; transition: border-color .2s;
     }
-    .feature-card:hover { border-color: var(--blue); }
+    .feature-card:hover { border-color: var(--muted); }
     .feature-icon {
-      width: 44px; height: 44px; border-radius: 12px;
+      width: 40px; height: 40px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 20px; margin-bottom: 16px;
+      font-size: 18px; margin-bottom: 14px;
     }
-    .feature-icon.blue { background: rgba(59,130,246,.15); }
-    .feature-icon.green { background: rgba(34,197,94,.15); }
-    .feature-icon.orange { background: rgba(249,115,22,.15); }
-    .feature-icon.purple { background: rgba(168,85,247,.15); }
-    .feature-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-    .feature-card p { font-size: 14px; color: var(--muted); line-height: 1.5; }
+    .feature-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .feature-card p { font-size: 13px; color: var(--muted); line-height: 1.5; }
 
-    /* ── Platforms ── */
-    .platforms {
-      max-width: 900px; margin: 0 auto 80px; padding: 0 24px; text-align: center;
-    }
-    .platforms h2 { font-size: 32px; font-weight: 700; margin-bottom: 12px; }
-    .platforms .sub { color: var(--muted); font-size: 16px; margin-bottom: 32px; }
-    .platform-tags {
-      display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
-    }
-    .platform-tag {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-      padding: 8px 16px; font-size: 13px; color: var(--muted); transition: all .2s;
-    }
-    .platform-tag:hover { border-color: var(--blue); color: var(--text); }
-    .platform-tag.more {
-      background: transparent; border-style: dashed; color: var(--dim);
-    }
+    .project--dispatcher .feature-icon { background: rgba(59,130,246,.15); }
+    .project--privateer .feature-icon { background: rgba(34,197,94,.15); }
+    .project--exitium .feature-icon { background: rgba(249,115,22,.15); }
 
-    /* ── Pricing ── */
-    .pricing {
-      max-width: 500px; margin: 0 auto 80px; padding: 0 24px; text-align: center;
+    /* ── Divider ── */
+    .divider {
+      width: 100%; max-width: 600px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 0 auto;
     }
-    .pricing h2 { font-size: 32px; font-weight: 700; margin-bottom: 12px; }
-    .pricing .sub { color: var(--muted); font-size: 16px; margin-bottom: 32px; }
-    .price-card {
-      background: var(--surface); border: 1px solid var(--blue);
-      border-radius: 20px; padding: 40px 32px;
-      box-shadow: 0 0 40px rgba(59,130,246,.1);
-    }
-    .price-amount {
-      font-size: 56px; font-weight: 800; color: var(--text); margin-bottom: 4px;
-    }
-    .price-amount span { font-size: 20px; color: var(--muted); font-weight: 400; }
-    .price-note { color: var(--dim); font-size: 14px; margin-bottom: 24px; }
-    .price-features {
-      list-style: none; text-align: left; margin-bottom: 28px;
-    }
-    .price-features li {
-      padding: 8px 0; font-size: 14px; color: var(--muted);
-      display: flex; align-items: center; gap: 10px;
-    }
-    .price-features li::before {
-      content: ""; display: inline-block; width: 6px; height: 6px;
-      background: var(--green); border-radius: 50; flex-shrink: 0;
-    }
-    .price-features li::before { border-radius: 50%; }
-    .btn-buy {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--blue); color: #fff; border: none; border-radius: 12px;
-      padding: 16px 36px; font-size: 16px; font-weight: 700; cursor: pointer;
-      transition: all .2s; width: 100%; justify-content: center;
-      text-decoration: none;
-    }
-    .btn-buy:hover { background: var(--blue-hover); transform: translateY(-1px); text-decoration: none; }
 
     /* ── Footer ── */
     footer {
@@ -222,200 +204,402 @@
       color: var(--dim); font-size: 13px;
     }
     footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
 
     /* ── Responsive ── */
     @media (max-width: 640px) {
-      .preview-body { grid-template-columns: 1fr; }
-      .nav-links { gap: 16px; }
-      .hero { padding: 50px 20px 40px; }
+      .topnav-links a { padding: 7px 10px; font-size: 12px; }
+      .project { padding: 90px 16px 60px; }
+      .hero { margin-bottom: 40px; }
       .hero-buttons { flex-direction: column; align-items: center; }
+      .mock-grid { grid-template-columns: 1fr; }
+      .preview-body { padding: 16px; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Nav -->
-  <nav>
-    <div class="nav-brand">
-      <img src="https://raw.githubusercontent.com/Destrox646/ftss-dispatch-dashboard/master/media-downloader/Logo54.PNG" alt="Privateer" onerror="this.style.display='none'" />
-      <span>Privateer</span>
-    </div>
-    <div class="nav-links">
-      <a href="#features">Features</a>
-      <a href="#platforms">Platforms</a>
-      <a href="#pricing">Pricing</a>
-    </div>
-  </nav>
-
-  <!-- Hero -->
-  <section class="hero">
-    <div class="hero-badge">Desktop App &middot; Windows</div>
-    <h1>Download &amp; Edit Media from Anywhere</h1>
-    <p>One app for 80+ platforms. Download videos, extract audio, trim clips, adjust volume, compress files — all with drag and drop.</p>
-    <div class="hero-buttons">
-      <a href="#pricing" class="btn btn-primary">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Download Free
-      </a>
-      <a href="#features" class="btn btn-secondary">Learn More</a>
-    </div>
-  </section>
-
-  <!-- App Preview -->
-  <section class="preview">
-    <div class="preview-window">
-      <div class="preview-bar">
-        <div class="preview-dot r"></div>
-        <div class="preview-dot y"></div>
-        <div class="preview-dot g"></div>
-        <span>Privateer</span>
+  <!-- Fixed Nav -->
+  <div class="topnav">
+    <div class="topnav-inner">
+      <div class="topnav-brand">Destrox64</div>
+      <div class="topnav-links">
+        <a href="#dispatcher" data-project="dispatcher">Dispatcher</a>
+        <a href="#privateer" data-project="privateer">Privateer</a>
+        <a href="#exitium" data-project="exitium">Exitium</a>
       </div>
-      <div class="preview-body">
-        <div class="preview-left">
-          <div class="mock-label">Paste URL</div>
-          <div class="mock-input">https://youtube.com/watch?v=...</div>
-          <div class="mock-label">Format</div>
-          <div class="mock-row">
-            <div class="mock-chip active">MP4</div>
-            <div class="mock-chip">MP3</div>
-            <div class="mock-chip">WebM</div>
-            <div class="mock-chip">WAV</div>
-          </div>
-          <div class="mock-label">Quality</div>
-          <div class="mock-row">
-            <div class="mock-chip active">Best</div>
-            <div class="mock-chip">1080p</div>
-            <div class="mock-chip">720p</div>
-            <div class="mock-chip">Audio</div>
-          </div>
-          <button class="mock-btn">Download</button>
-          <div class="mock-progress">
-            <div class="mock-progress-fill"></div>
-          </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ DISPATCHER ═══════════ -->
+  <section class="project project--dispatcher" id="dispatcher">
+    <div class="hero">
+      <div class="hero-badge">Web App &middot; React + Firebase</div>
+      <h1>Dispatcher</h1>
+      <p>A full-featured dispatch dashboard for trucking logistics. Manage contacts, schedules, finances, SMS chat, and team coordination — all in one place.</p>
+      <div class="hero-buttons">
+        <a href="https://github.com/Destrox646/ftss-dispatch-dashboard" class="btn btn-primary" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+          View on GitHub
+        </a>
+        <a href="#dispatcher-preview" class="btn btn-secondary">See Features</a>
+      </div>
+    </div>
+
+    <!-- Dashboard Preview -->
+    <div class="preview" id="dispatcher-preview">
+      <div class="preview-window">
+        <div class="preview-bar">
+          <div class="preview-dot r"></div>
+          <div class="preview-dot y"></div>
+          <div class="preview-dot g"></div>
+          <span>Dispatcher Dashboard</span>
         </div>
-        <div class="preview-right">
-          <div class="mock-drop">
-            <div style="font-size:24px;margin-bottom:6px">&#11015;</div>
-            Drop a file here to edit
-          </div>
-          <div class="mock-label">Trim</div>
-          <div class="mock-row">
-            <div class="mock-input" style="flex:1;margin:0">0:00</div>
-            <span style="color:var(--dim);align-self:center">to</span>
-            <div class="mock-input" style="flex:1;margin:0">2:30</div>
-          </div>
-          <div class="mock-label" style="margin-top:14px">Volume</div>
-          <div class="mock-slider">
-            <div class="mock-slider-fill"></div>
-            <div class="mock-slider-dot"></div>
-          </div>
-          <div class="mock-label">Compression</div>
-          <div class="mock-row">
-            <div class="mock-chip">None</div>
-            <div class="mock-chip">Low</div>
-            <div class="mock-chip active">Med</div>
-            <div class="mock-chip">High</div>
+        <div class="preview-body">
+          <div class="mock-grid">
+            <div class="mock-card">
+              <div class="mock-label">Active Drivers</div>
+              <div class="mock-value">24</div>
+              <div class="mock-bar"><div class="mock-bar-fill" style="width:80%"></div></div>
+            </div>
+            <div class="mock-card">
+              <div class="mock-label">Loads Today</div>
+              <div class="mock-value">18</div>
+              <div class="mock-bar"><div class="mock-bar-fill" style="width:60%"></div></div>
+            </div>
+            <div class="mock-card">
+              <div class="mock-label">Revenue (MTD)</div>
+              <div class="mock-value">$142,800</div>
+              <div class="mock-bar"><div class="mock-bar-fill" style="width:72%"></div></div>
+            </div>
+            <div class="mock-card">
+              <div class="mock-label">Pending Messages</div>
+              <div class="mock-value">7</div>
+              <div class="mock-bar"><div class="mock-bar-fill" style="width:35%"></div></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- Features -->
-  <section class="features" id="features">
-    <h2>Everything You Need</h2>
-    <div class="feature-grid">
-      <div class="feature-card">
-        <div class="feature-icon blue">&#127909;</div>
-        <h3>80+ Platforms</h3>
-        <p>YouTube, TikTok, Instagram, Twitter/X, Reddit, Twitch, SoundCloud, Bilibili, and dozens more.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon green">&#9989;</div>
-        <h3>Multiple Formats</h3>
-        <p>Save as MP4, MP3, WebM, or WAV. Choose quality from best available down to 720p or audio-only.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon orange">&#9988;</div>
-        <h3>Trim &amp; Edit</h3>
-        <p>Cut clips with precise timecodes. Adjust volume up to 200%. Compress with low, medium, or high presets.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon purple">&#128260;</div>
-        <h3>Drag &amp; Drop</h3>
-        <p>Drop local media files directly into the app to edit — no URL needed. Works with any video or audio file.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon blue">&#9889;</div>
-        <h3>Fast &amp; Lightweight</h3>
-        <p>Built on yt-dlp and ffmpeg. No bloat, no accounts, no tracking. Just paste a link and go.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon green">&#127777;</div>
-        <h3>Dark Theme</h3>
-        <p>Clean, modern dark interface designed for comfort. Minimal UI that stays out of your way.</p>
+    <!-- Features -->
+    <div class="features">
+      <h2>What It Does</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">&#128666;</div>
+          <h3>Contact Management</h3>
+          <p>Full driver and dispatcher roster with roles, phone numbers, and quick-search. Manager-gated edit and delete controls.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128172;</div>
+          <h3>Two-Way SMS Chat</h3>
+          <p>Send and receive text messages through a Twilio-powered chat interface. Cost confirmation dialogs to keep spending in check.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128197;</div>
+          <h3>Schedule &amp; CSV Import</h3>
+          <p>Weekly schedule view with CSV import from Sceddy format. Time-off requests stay fully editable for the whole team.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128200;</div>
+          <h3>Financials</h3>
+          <p>Revenue tracking with ranked charts. Visual breakdowns of loads, lanes, and driver performance over time.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#127777;</div>
+          <h3>Weather &amp; Diesel</h3>
+          <p>Dashboard widgets showing live weather conditions and diesel price trends — critical intel for dispatch decisions.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128241;</div>
+          <h3>Mobile Responsive</h3>
+          <p>Hamburger menu and responsive grids adapt the full dashboard experience to phones and tablets.</p>
+        </div>
       </div>
     </div>
+
+    <div class="divider"></div>
   </section>
 
-  <!-- Platforms -->
-  <section class="platforms" id="platforms">
-    <h2>Supported Platforms</h2>
-    <p class="sub">Download from all your favorite sites</p>
-    <div class="platform-tags">
-      <div class="platform-tag">YouTube</div>
-      <div class="platform-tag">TikTok</div>
-      <div class="platform-tag">Instagram</div>
-      <div class="platform-tag">Twitter / X</div>
-      <div class="platform-tag">Facebook</div>
-      <div class="platform-tag">Reddit</div>
-      <div class="platform-tag">Twitch</div>
-      <div class="platform-tag">Kick</div>
-      <div class="platform-tag">Rumble</div>
-      <div class="platform-tag">SoundCloud</div>
-      <div class="platform-tag">Spotify</div>
-      <div class="platform-tag">Vimeo</div>
-      <div class="platform-tag">Bilibili</div>
-      <div class="platform-tag">Dailymotion</div>
-      <div class="platform-tag">Bandcamp</div>
-      <div class="platform-tag">Threads</div>
-      <div class="platform-tag">Bluesky</div>
-      <div class="platform-tag">Imgur</div>
-      <div class="platform-tag">TED</div>
-      <div class="platform-tag">Crunchyroll</div>
-      <div class="platform-tag">Archive.org</div>
-      <div class="platform-tag more">+ 60 more</div>
+  <!-- ═══════════ PRIVATEER ═══════════ -->
+  <section class="project project--privateer" id="privateer">
+    <div class="hero">
+      <div class="hero-badge">Desktop App &middot; Windows &middot; Python</div>
+      <h1>Privateer</h1>
+      <p>Download media from 80+ platforms. Trim, convert, compress — all in one lightweight desktop app. No accounts, no tracking.</p>
+      <div class="hero-buttons">
+        <a href="#pricing-privateer" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Get Privateer — $2
+        </a>
+        <a href="#privateer-preview" class="btn btn-secondary">See Features</a>
+      </div>
     </div>
+
+    <!-- App Preview -->
+    <div class="preview" id="privateer-preview">
+      <div class="preview-window">
+        <div class="preview-bar">
+          <div class="preview-dot r"></div>
+          <div class="preview-dot y"></div>
+          <div class="preview-dot g"></div>
+          <span>Privateer</span>
+        </div>
+        <div class="preview-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+            <div>
+              <div class="mock-label">Paste URL</div>
+              <div class="mock-input">https://youtube.com/watch?v=...</div>
+              <div class="mock-label">Format</div>
+              <div class="mock-row">
+                <div class="mock-chip active">MP4</div>
+                <div class="mock-chip">MP3</div>
+                <div class="mock-chip">WebM</div>
+                <div class="mock-chip">WAV</div>
+              </div>
+              <div class="mock-label">Quality</div>
+              <div class="mock-row">
+                <div class="mock-chip active">Best</div>
+                <div class="mock-chip">1080p</div>
+                <div class="mock-chip">720p</div>
+                <div class="mock-chip">Audio</div>
+              </div>
+              <button class="mock-btn">Download</button>
+              <div class="mock-progress">
+                <div class="mock-progress-fill" style="width:67%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="mock-drop">
+                <div style="font-size:22px;margin-bottom:4px">&#11015;</div>
+                Drop a file here to edit
+              </div>
+              <div class="mock-label">Trim</div>
+              <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+                <div class="mock-input" style="flex:1;margin:0">0:00</div>
+                <span style="color:var(--dim)">to</span>
+                <div class="mock-input" style="flex:1;margin:0">2:30</div>
+              </div>
+              <div class="mock-label">Volume</div>
+              <div class="mock-slider">
+                <div class="mock-slider-fill" style="width:50%"></div>
+                <div class="mock-slider-dot" style="left:50%"></div>
+              </div>
+              <div class="mock-label">Compression</div>
+              <div class="mock-row">
+                <div class="mock-chip">None</div>
+                <div class="mock-chip">Low</div>
+                <div class="mock-chip active">Med</div>
+                <div class="mock-chip">High</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features -->
+    <div class="features">
+      <h2>What It Does</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">&#127909;</div>
+          <h3>80+ Platforms</h3>
+          <p>YouTube, TikTok, Instagram, Twitter/X, Reddit, Twitch, SoundCloud, Bilibili, and dozens more.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#9989;</div>
+          <h3>Multiple Formats</h3>
+          <p>Save as MP4, MP3, WebM, or WAV. Choose quality from best available down to 720p or audio-only.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#9988;</div>
+          <h3>Trim &amp; Edit</h3>
+          <p>Cut clips with precise timecodes. Adjust volume up to 200%. Compress with low, medium, or high presets.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128260;</div>
+          <h3>Drag &amp; Drop</h3>
+          <p>Drop local media files directly into the app to edit — no URL needed. Works with any video or audio file.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#9889;</div>
+          <h3>Fast &amp; Lightweight</h3>
+          <p>Built on yt-dlp and ffmpeg. No bloat, no accounts, no tracking. Just paste a link and go.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#127777;</div>
+          <h3>Dark Theme</h3>
+          <p>Clean, modern dark interface designed for comfort. Minimal UI that stays out of your way.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pricing -->
+    <div class="features" id="pricing-privateer" style="max-width:500px">
+      <h2>Simple Pricing</h2>
+      <div style="background:var(--surface);border:1px solid var(--green);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 0 40px rgba(34,197,94,.1)">
+        <div style="font-size:52px;font-weight:800;color:var(--text)">$2 <span style="font-size:18px;color:var(--muted);font-weight:400">one-time</span></div>
+        <div style="color:var(--dim);font-size:14px;margin-bottom:20px">Lifetime license &middot; Free updates</div>
+        <ul style="list-style:none;text-align:left;margin-bottom:24px">
+          <li style="padding:7px 0;font-size:14px;color:var(--muted)"><span style="color:var(--green);margin-right:8px">&#10003;</span> Download from 80+ platforms</li>
+          <li style="padding:7px 0;font-size:14px;color:var(--muted)"><span style="color:var(--green);margin-right:8px">&#10003;</span> MP4, MP3, WebM, WAV output</li>
+          <li style="padding:7px 0;font-size:14px;color:var(--muted)"><span style="color:var(--green);margin-right:8px">&#10003;</span> Trim, volume, and compression</li>
+          <li style="padding:7px 0;font-size:14px;color:var(--muted)"><span style="color:var(--green);margin-right:8px">&#10003;</span> Drag &amp; drop local file editing</li>
+          <li style="padding:7px 0;font-size:14px;color:var(--muted)"><span style="color:var(--green);margin-right:8px">&#10003;</span> Lifetime license key</li>
+          <li style="padding:7px 0;font-size:14px;color:var(--muted)"><span style="color:var(--green);margin-right:8px">&#10003;</span> Free updates forever</li>
+        </ul>
+        <a href="https://buy.stripe.com/bJefZac3v2JG8fGc0267S00" class="btn btn-primary" target="_blank" rel="noopener" style="width:100%;justify-content:center;padding:15px;font-size:16px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          Buy License — $2
+        </a>
+        <p style="margin-top:10px;font-size:12px;color:var(--dim)">Secure checkout via Stripe</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
   </section>
 
-  <!-- Pricing -->
-  <section class="pricing" id="pricing">
-    <h2>Simple Pricing</h2>
-    <p class="sub">No subscriptions. No accounts. One-time purchase.</p>
-    <div class="price-card">
-      <div class="price-amount">$2 <span>one-time</span></div>
-      <div class="price-note">Lifetime license &middot; Free updates</div>
-      <ul class="price-features">
-        <li>Download from 80+ platforms</li>
-        <li>MP4, MP3, WebM, WAV output</li>
-        <li>Trim, volume, and compression</li>
-        <li>Drag &amp; drop local file editing</li>
-        <li>Lifetime license key</li>
-        <li>Free updates forever</li>
-      </ul>
-      <a href="https://buy.stripe.com/bJefZac3v2JG8fGc0267S00" class="btn-buy" target="_blank" rel="noopener">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-        Buy License — $2
-      </a>
-      <p style="margin-top:12px;font-size:12px;color:var(--dim)">Secure checkout via Stripe</p>
+  <!-- ═══════════ EXITIUM ═══════════ -->
+  <section class="project project--exitium" id="exitium">
+    <div class="hero">
+      <div class="hero-badge">Desktop App &middot; Windows &middot; Python + Whisper</div>
+      <h1>Exitium</h1>
+      <p>Video download, smart cut, transcribe, and subtitle sync — all in one pipeline. Powered by ffmpeg and Whisper AI.</p>
+      <div class="hero-buttons">
+        <a href="https://github.com/Destrox646" class="btn btn-primary" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+          View on GitHub
+        </a>
+        <a href="#exitium-preview" class="btn btn-secondary">See Features</a>
+      </div>
     </div>
+
+    <!-- App Preview -->
+    <div class="preview" id="exitium-preview">
+      <div class="preview-window">
+        <div class="preview-bar">
+          <div class="preview-dot r"></div>
+          <div class="preview-dot y"></div>
+          <div class="preview-dot g"></div>
+          <span>Exitium</span>
+        </div>
+        <div class="preview-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+            <div>
+              <div class="mock-label">Source</div>
+              <div class="mock-input">https://youtube.com/watch?v=...</div>
+              <div class="mock-label">Pipeline Steps</div>
+              <div class="mock-row">
+                <div class="mock-chip active">Download</div>
+                <div class="mock-chip active">Smart Cut</div>
+                <div class="mock-chip active">Transcribe</div>
+                <div class="mock-chip active">Subtitles</div>
+              </div>
+              <div class="mock-label">Output Format</div>
+              <div class="mock-row">
+                <div class="mock-chip active">MP4</div>
+                <div class="mock-chip">WebM</div>
+                <div class="mock-chip">MKV</div>
+              </div>
+              <button class="mock-btn">Run Pipeline</button>
+              <div class="mock-progress">
+                <div class="mock-progress-fill" style="width:45%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="mock-label">Subtitle Style</div>
+              <div class="mock-row">
+                <div class="mock-chip active">Default</div>
+                <div class="mock-chip">Bold</div>
+                <div class="mock-chip">Minimal</div>
+              </div>
+              <div class="mock-label">Font Size</div>
+              <div class="mock-slider">
+                <div class="mock-slider-fill" style="width:60%"></div>
+                <div class="mock-slider-dot" style="left:60%"></div>
+              </div>
+              <div class="mock-label">Position</div>
+              <div class="mock-row">
+                <div class="mock-chip">Top</div>
+                <div class="mock-chip active">Bottom</div>
+                <div class="mock-chip">Center</div>
+              </div>
+              <div class="mock-label">Whisper Model</div>
+              <div class="mock-row">
+                <div class="mock-chip">Tiny</div>
+                <div class="mock-chip">Base</div>
+                <div class="mock-chip active">Small</div>
+                <div class="mock-chip">Medium</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features -->
+    <div class="features">
+      <h2>What It Does</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">&#127916;</div>
+          <h3>Video Download</h3>
+          <p>Download videos from supported platforms with quality selection. Feeds directly into the processing pipeline.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#9986;</div>
+          <h3>Smart Cut</h3>
+          <p>Trim and cut video segments with frame-level precision. Only re-encodes at the final concat step for speed.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#127908;</div>
+          <h3>AI Transcription</h3>
+          <p>Whisper-powered speech-to-text with multiple model sizes. Generates accurate transcriptions from any audio source.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128172;</div>
+          <h3>Subtitle Sync</h3>
+          <p>Auto-generate and sync subtitles with customizable styles, fonts, colors, and positioning.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#9881;</div>
+          <h3>Full Pipeline</h3>
+          <p>Chain all steps together: download, cut, transcribe, and burn subtitles in a single automated run.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128230;</div>
+          <h3>Packaged .exe</h3>
+          <p>Standalone Windows executable — no Python install needed. One file, double-click, done.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
   </section>
 
   <!-- Footer -->
   <footer>
-    <p>&copy; 2026 Privateer &middot; <a href="https://github.com/Destrox646">GitHub</a> &middot; <a href="mailto:ctwagner3@gmail.com">Contact</a></p>
+    <p>&copy; 2026 Destrox64 &middot; <a href="https://github.com/Destrox646">GitHub</a> &middot; <a href="mailto:ctwagner3@gmail.com">Contact</a></p>
   </footer>
 
+  <!-- Active nav highlight on scroll -->
+  <script>
+    const sections = document.querySelectorAll('.project');
+    const navLinks = document.querySelectorAll('.topnav-links a');
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          navLinks.forEach(l => l.classList.remove('active'));
+          const id = e.target.id;
+          const link = document.querySelector(`.topnav-links a[data-project="${id}"]`);
+          if (link) link.classList.add('active');
+        }
+      });
+    }, { threshold: 0.3 });
+    sections.forEach(s => observer.observe(s));
+  </script>
 
 </body>
 </html>
