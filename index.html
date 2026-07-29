@@ -214,6 +214,7 @@
       .hero-buttons { flex-direction: column; align-items: center; }
       .mock-grid { grid-template-columns: 1fr; }
       .preview-body { padding: 16px; }
+      .preview-body .two-col { grid-template-columns: 1fr !important; }
     }
   </style>
 </head>
@@ -347,7 +348,7 @@
           <span>Privateer</span>
         </div>
         <div class="preview-body">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+          <div class="two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
             <div>
               <div class="mock-label">Paste URL</div>
               <div class="mock-input">https://youtube.com/watch?v=...</div>
@@ -486,7 +487,7 @@
           <span>Exitium</span>
         </div>
         <div class="preview-body">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+          <div class="two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
             <div>
               <div class="mock-label">Source</div>
               <div class="mock-input">https://youtube.com/watch?v=...</div>
