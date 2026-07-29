@@ -25,10 +25,24 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: cp dist/index.html dist/404.html
+      - name: Restructure for GitHub Pages
+        run: |
+          # Move React app build to /app/ subpath
+          mkdir -p _deploy/app
+          mv dist/* _deploy/app/ 2>/dev/null || true
+          mv dist/.* _deploy/app/ 2>/dev/null || true
+          # Copy landing page and demo files to root
+          cp index.html _deploy/
+          cp demo-dispatcher.html _deploy/
+          cp demo-privateer.html _deploy/
+          cp demo-exitium.html _deploy/
+          # Add 404 for React app client-side routing
+          cp _deploy/app/index.html _deploy/app/404.html
+          # CNAME for custom domain at root level
+          echo "Destrox64.com" > _deploy/CNAME
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: _deploy
 
   deploy:
     needs: build
