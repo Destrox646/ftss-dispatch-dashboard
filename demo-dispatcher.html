@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dispatcher — Interactive Demo</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #242836; --border: #2d3145;
+      --text: #e8eaed; --muted: #9aa0b0; --dim: #6b7280;
+      --blue: #3b82f6; --blue-hover: #2563eb; --green: #22c55e; --red: #ef4444; --orange: #f97316;
+      --sidebar: 240px;
+    }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; }
+    a { text-decoration: none; color: var(--blue); }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar); background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; flex-shrink: 0; height: 100vh;
+    }
+    .sidebar-brand {
+      padding: 20px; border-bottom: 1px solid var(--border);
+      font-size: 18px; font-weight: 800; color: var(--blue); display: flex; align-items: center; gap: 10px;
+    }
+    .sidebar-brand span { font-size: 11px; color: var(--dim); font-weight: 400; margin-left: auto; background: var(--bg); padding: 2px 8px; border-radius: 4px; }
+    .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+    .nav-section { font-size: 10px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; padding: 16px 10px 6px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px;
+      font-size: 13px; color: var(--muted); cursor: pointer; transition: all .15s;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: rgba(59,130,246,.15); color: var(--blue); font-weight: 600; }
+    .nav-item .icon { width: 18px; text-align: center; font-size: 14px; }
+    .nav-item .badge { margin-left: auto; background: var(--red); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 700; }
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; }
+    .sidebar-footer .info { font-size: 12px; }
+    .sidebar-footer .name { font-weight: 600; }
+    .sidebar-footer .role { color: var(--dim); }
+
+    /* Main */
+    .main { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0;
+    }
+    .topbar h2 { font-size: 18px; font-weight: 700; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .topbar-btn {
+      padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2);
+      color: var(--text); font-size: 12px; cursor: pointer; transition: all .15s;
+    }
+    .topbar-btn:hover { border-color: var(--blue); }
+    .topbar-btn.primary { background: var(--blue); border-color: var(--blue); }
+    .topbar-btn.primary:hover { background: var(--blue-hover); }
+    .search-box {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      padding: 7px 12px; color: var(--text); font-size: 12px; width: 200px; outline: none;
+    }
+    .search-box:focus { border-color: var(--blue); }
+
+    .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+    /* Views */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* Stat Cards */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+    }
+    .stat-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+    .stat-value { font-size: 28px; font-weight: 800; margin: 4px 0; }
+    .stat-change { font-size: 12px; }
+    .stat-change.up { color: var(--green); }
+    .stat-change.down { color: var(--red); }
+    .stat-bar { height: 4px; background: var(--bg); border-radius: 4px; margin-top: 10px; overflow: hidden; }
+    .stat-bar-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+
+    /* Chart */
+    .chart-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 24px;
+    }
+    .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .chart-header h3 { font-size: 14px; font-weight: 600; }
+    .chart-pills { display: flex; gap: 4px; }
+    .chart-pill {
+      padding: 4px 10px; border-radius: 6px; font-size: 11px; color: var(--muted); cursor: pointer; border: 1px solid transparent;
+    }
+    .chart-pill.active { background: var(--blue); color: #fff; }
+    .chart-pill:hover:not(.active) { background: var(--surface2); }
+    .chart-area { height: 160px; display: flex; align-items: flex-end; gap: 6px; padding-top: 10px; }
+    .chart-bar {
+      flex: 1; background: var(--blue); border-radius: 4px 4px 0 0; min-width: 20px;
+      transition: height .6s ease; opacity: .8; position: relative;
+    }
+    .chart-bar:hover { opacity: 1; }
+    .chart-bar .tooltip {
+      display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+      background: var(--surface2); border: 1px solid var(--border); padding: 4px 8px; border-radius: 6px;
+      font-size: 11px; white-space: nowrap; margin-bottom: 4px;
+    }
+    .chart-bar:hover .tooltip { display: block; }
+    .chart-labels { display: flex; gap: 6px; margin-top: 8px; }
+    .chart-labels span { flex: 1; text-align: center; font-size: 10px; color: var(--dim); }
+
+    /* Table */
+    .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
+    .table-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .table-header h3 { font-size: 14px; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border); }
+    td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+    .status { padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    .status.active { background: rgba(34,197,94,.15); color: var(--green); }
+    .status.pending { background: rgba(249,115,22,.15); color: var(--orange); }
+    .status.offline { background: rgba(107,114,128,.15); color: var(--dim); }
+
+    /* Chat */
+    .chat-container { display: grid; grid-template-columns: 260px 1fr; gap: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; height: calc(100vh - 180px); }
+    .chat-list { border-right: 1px solid var(--border); overflow-y: auto; }
+    .chat-list-header { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; }
+    .chat-contact { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background .15s; }
+    .chat-contact:hover, .chat-contact.active { background: var(--surface2); }
+    .chat-contact .avatar { width: 36px; height: 36px; font-size: 12px; flex-shrink: 0; }
+    .chat-contact .preview { font-size: 12px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+    .chat-contact .time { margin-left: auto; font-size: 10px; color: var(--dim); }
+    .chat-contact .unread { background: var(--blue); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 10px; margin-left: 6px; }
+    .chat-main { display: flex; flex-direction: column; }
+    .chat-topbar { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .chat-topbar .name { font-weight: 600; font-size: 14px; }
+    .chat-topbar .phone { font-size: 12px; color: var(--dim); }
+    .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .msg { max-width: 70%; padding: 10px 14px; border-radius: 14px; font-size: 13px; line-height: 1.4; }
+    .msg.sent { background: var(--blue); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .msg.received { background: var(--surface2); align-self: flex-start; border-bottom-left-radius: 4px; }
+    .msg .time { font-size: 10px; opacity: .6; margin-top: 4px; }
+    .chat-input { display: flex; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); }
+    .chat-input input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); font-size: 13px; outline: none; }
+    .chat-input input:focus { border-color: var(--blue); }
+    .chat-input button { background: var(--blue); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .chat-input button:hover { background: var(--blue-hover); }
+
+    /* Schedule */
+    .schedule-grid { display: grid; grid-template-columns: 80px repeat(7, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .schedule-header { background: var(--surface2); padding: 10px 8px; font-size: 11px; font-weight: 600; text-align: center; color: var(--muted); }
+    .schedule-time { background: var(--surface); padding: 8px; font-size: 11px; color: var(--dim); text-align: right; }
+    .schedule-cell { background: var(--surface); padding: 4px; min-height: 48px; cursor: pointer; transition: background .15s; }
+    .schedule-cell:hover { background: var(--surface2); }
+    .schedule-event {
+      background: rgba(59,130,246,.2); border-left: 3px solid var(--blue); border-radius: 4px;
+      padding: 4px 6px; font-size: 10px; margin-bottom: 2px; cursor: pointer;
+    }
+    .schedule-event.green { background: rgba(34,197,94,.2); border-color: var(--green); }
+    .schedule-event.orange { background: rgba(249,115,22,.2); border-color: var(--orange); }
+
+    /* Financials */
+    .fin-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+    .fin-list { list-style: none; }
+    .fin-list li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .fin-list li:last-child { border-bottom: none; }
+    .fin-rank { width: 24px; height: 24px; border-radius: 6px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--muted); }
+    .fin-rank.top { background: var(--blue); color: #fff; }
+    .fin-name { font-size: 13px; font-weight: 500; flex: 1; }
+    .fin-amount { font-size: 13px; font-weight: 700; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .chat-container { grid-template-columns: 1fr; }
+      .chat-list { display: none; }
+      .fin-grid { grid-template-columns: 1fr; }
+      .schedule-grid { font-size: 10px; }
+    }
+
+    .back-link {
+      position: fixed; top: 10px; left: 10px; z-index: 100;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 6px 12px; font-size: 12px; color: var(--muted); cursor: pointer; transition: all .15s;
+    }
+    .back-link:hover { color: var(--text); border-color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">&larr; Back to Destrox64</a>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    &#128666; Dispatcher <span>DEMO</span>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">Main</div>
+    <div class="nav-item active" data-view="dashboard"><span class="icon">&#128202;</span> Dashboard</div>
+    <div class="nav-item" data-view="contacts"><span class="icon">&#128101;</span> Contacts <span class="badge">62</span></div>
+    <div class="nav-item" data-view="chat"><span class="icon">&#128172;</span> SMS Chat <span class="badge">3</span></div>
+    <div class="nav-item" data-view="schedule"><span class="icon">&#128197;</span> Schedule</div>
+    <div class="nav-item" data-view="financials"><span class="icon">&#128200;</span> Financials</div>
+    <div class="nav-section">Other</div>
+    <div class="nav-item" data-view="dashboard"><span class="icon">&#128777;</span> Weather</div>
+    <div class="nav-item" data-view="dashboard"><span class="icon">&#9881;</span> Settings</div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="avatar">C</div>
+    <div class="info">
+      <div class="name">Chris</div>
+      <div class="role">Manager</div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+  <div class="topbar">
+    <h2 id="view-title">Dashboard</h2>
+    <div class="topbar-right">
+      <input class="search-box" placeholder="Search..." />
+      <button class="topbar-btn primary">+ Add Contact</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD VIEW -->
+    <div class="view active" id="view-dashboard">
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-label">Active Drivers</div>
+          <div class="stat-value" style="color:var(--blue)">24</div>
+          <div class="stat-change up">&#9650; 3 from last week</div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:80%;background:var(--blue)"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Loads Today</div>
+          <div class="stat-value" style="color:var(--green)">18</div>
+          <div class="stat-change up">&#9650; 5 from yesterday</div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:60%;background:var(--green)"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Revenue (MTD)</div>
+          <div class="stat-value" style="color:var(--orange)">$142,800</div>
+          <div class="stat-change up">&#9650; 12% vs last month</div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:72%;background:var(--orange)"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Diesel Avg</div>
+          <div class="stat-value">$3.47</div>
+          <div class="stat-change down">&#9660; $0.08 from last week</div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:55%;background:var(--red)"></div></div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Weekly Revenue</h3>
+          <div class="chart-pills">
+            <div class="chart-pill active">Week</div>
+            <div class="chart-pill">Month</div>
+            <div class="chart-pill">Quarter</div>
+          </div>
+        </div>
+        <div class="chart-area" id="revenue-chart"></div>
+        <div class="chart-labels" id="chart-labels"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="chart-card">
+          <div class="chart-header"><h3>Weather — Chicago, IL</h3></div>
+          <div style="display:flex;align-items:center;gap:20px">
+            <div style="font-size:48px">&#9925;</div>
+            <div>
+              <div style="font-size:28px;font-weight:700">62&deg;F</div>
+              <div style="font-size:13px;color:var(--muted)">Partly Cloudy &middot; Wind 12mph NW</div>
+              <div style="font-size:12px;color:var(--dim);margin-top:4px">H: 68&deg; L: 54&deg;</div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><h3>Diesel Prices</h3></div>
+          <div style="display:flex;align-items:flex-end;gap:8px;height:80px">
+            <div style="flex:1;background:var(--blue);height:60%;border-radius:4px 4px 0 0;opacity:.5"></div>
+            <div style="flex:1;background:var(--blue);height:65%;border-radius:4px 4px 0 0;opacity:.6"></div>
+            <div style="flex:1;background:var(--blue);height:70%;border-radius:4px 4px 0 0;opacity:.7"></div>
+            <div style="flex:1;background:var(--blue);height:58%;border-radius:4px 4px 0 0;opacity:.8"></div>
+            <div style="flex:1;background:var(--blue);height:55%;border-radius:4px 4px 0 0;opacity:.9"></div>
+            <div style="flex:1;background:var(--blue);height:52%;border-radius:4px 4px 0 0"></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <span style="flex:1;text-align:center;font-size:10px;color:var(--dim)">Mon</span>
+            <span style="flex:1;text-align:center;font-size:10px;color:var(--dim)">Tue</span>
+            <span style="flex:1;text-align:center;font-size:10px;color:var(--dim)">Wed</span>
+            <span style="flex:1;text-align:center;font-size:10px;color:var(--dim)">Thu</span>
+            <span style="flex:1;text-align:center;font-size:10px;color:var(--dim)">Fri</span>
+            <span style="flex:1;text-align:center;font-size:10px;color:var(--dim)">Sat</span>
+          </div>
+          <div style="font-size:20px;font-weight:700;margin-top:8px">$3.47 <span style="font-size:12px;color:var(--green);font-weight:400">&#9660; $0.08</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACTS VIEW -->
+    <div class="view" id="view-contacts">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>FTSS Roster — 62 Contacts</h3>
+          <div style="display:flex;gap:8px">
+            <button class="topbar-btn">Import CSV</button>
+            <button class="topbar-btn primary">+ Add Contact</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Role</th><th>Phone</th><th>Status</th><th>Lane</th></tr>
+          </thead>
+          <tbody id="contacts-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CHAT VIEW -->
+    <div class="view" id="view-chat">
+      <div class="chat-container">
+        <div class="chat-list">
+          <div class="chat-list-header">Messages</div>
+          <div class="chat-contact active">
+            <div class="avatar" style="background:var(--blue)">MR</div>
+            <div>
+              <div style="font-size:13px;font-weight:600">Marcus Reed</div>
+              <div class="preview">ETA to Memphis?</div>
+            </div>
+            <div>
+              <div class="time">2m</div>
+              <div class="unread">2</div>
+            </div>
+          </div>
+          <div class="chat-contact">
+            <div class="avatar" style="background:var(--green)">JT</div>
+            <div>
+              <div style="font-size:13px;font-weight:600">James Torres</div>
+              <div class="preview">Load delivered OK</div>
+            </div>
+            <div class="time">18m</div>
+          </div>
+          <div class="chat-contact">
+            <div class="avatar" style="background:var(--orange)">DW</div>
+            <div>
+              <div style="font-size:13px;font-weight:600">DeShawn Williams</div>
+              <div class="preview">Need fuel stop</div>
+            </div>
+            <div>
+              <div class="time">1h</div>
+              <div class="unread">1</div>
+            </div>
+          </div>
+          <div class="chat-contact">
+            <div class="avatar" style="background:#8b5cf6">AK</div>
+            <div>
+              <div style="font-size:13px;font-weight:600">Alex Kim</div>
+              <div class="preview">On my way to pickup</div>
+            </div>
+            <div class="time">3h</div>
+          </div>
+          <div class="chat-contact">
+            <div class="avatar" style="background:#ec4899">SB</div>
+            <div>
+              <div style="font-size:13px;font-weight:600">Sarah Baker</div>
+              <div class="preview">Thanks!</div>
+            </div>
+            <div class="time">5h</div>
+          </div>
+        </div>
+        <div class="chat-main">
+          <div class="chat-topbar">
+            <div class="avatar" style="background:var(--blue);width:32px;height:32px;font-size:11px">MR</div>
+            <div>
+              <div class="name">Marcus Reed</div>
+              <div class="phone">(762) 555-0142 &middot; Active Driver</div>
+            </div>
+          </div>
+          <div class="chat-messages" id="chat-messages">
+            <div class="msg received">Hey dispatch, I'm about 30 miles out from Memphis. What's the unload window?<div class="time">10:42 AM</div></div>
+            <div class="msg sent">Checking with the receiver now. Stand by.<div class="time">10:43 AM</div></div>
+            <div class="msg received">Copy. Also need to know if there's a backhaul after this one.<div class="time">10:45 AM</div></div>
+            <div class="msg sent">Unload is 2pm-4pm at dock 7. Yes, I've got a load to Nashville ready for you after. $2,400.<div class="time">10:47 AM</div></div>
+            <div class="msg received">Perfect. ETA about 45 min. Will check in when I arrive.<div class="time">10:48 AM</div></div>
+            <div class="msg sent">Sounds good. Drive safe. &#128074;<div class="time">10:48 AM</div></div>
+          </div>
+          <div class="chat-input">
+            <input type="text" id="chat-input" placeholder="Type a message..." />
+            <button id="chat-send">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCHEDULE VIEW -->
+    <div class="view" id="view-schedule">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="topbar-btn">&larr; Prev</button>
+          <span style="font-weight:600">July 28 — Aug 3, 2026</span>
+          <button class="topbar-btn">Next &rarr;</button>
+        </div>
+        <button class="topbar-btn primary">Import CSV</button>
+      </div>
+      <div class="schedule-grid" id="schedule-grid"></div>
+    </div>
+
+    <!-- FINANCIALS VIEW -->
+    <div class="view" id="view-financials">
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-label">Monthly Revenue</div>
+          <div class="stat-value" style="color:var(--green)">$142,800</div>
+          <div class="stat-change up">&#9650; 12% vs June</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Per Load</div>
+          <div class="stat-value">$2,180</div>
+          <div class="stat-change up">&#9650; $120</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Loads</div>
+          <div class="stat-value" style="color:var(--blue)">65</div>
+          <div class="stat-change up">&#9650; 8</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Fuel Costs</div>
+          <div class="stat-value" style="color:var(--orange)">$28,400</div>
+          <div class="stat-change down">&#9660; $1,200</div>
+        </div>
+      </div>
+      <div class="fin-grid">
+        <div class="chart-card">
+          <div class="chart-header"><h3>Top Lanes by Revenue</h3></div>
+          <div class="chart-area" id="lanes-chart" style="height:200px"></div>
+          <div class="chart-labels" id="lanes-labels"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><h3>Top Drivers</h3></div>
+          <ul class="fin-list" id="top-drivers"></ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Navigation
+  const navItems = document.querySelectorAll('.nav-item[data-view]');
+  const views = document.querySelectorAll('.view');
+  const titles = { dashboard: 'Dashboard', contacts: 'Contacts', chat: 'SMS Chat', schedule: 'Schedule', financials: 'Financials' };
+
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const view = item.dataset.view;
+      navItems.forEach(n => n.classList.remove('active'));
+      item.classList.add('active');
+      views.forEach(v => v.classList.remove('active'));
+      document.getElementById('view-' + view).classList.add('active');
+      document.getElementById('view-title').textContent = titles[view] || 'Dashboard';
+    });
+  });
+
+  // Revenue Chart
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const values = [18200, 22400, 15600, 28100, 19800, 24600, 21300];
+  const max = Math.max(...values);
+  const chart = document.getElementById('revenue-chart');
+  const labels = document.getElementById('chart-labels');
+  values.forEach((v, i) => {
+    const bar = document.createElement('div');
+    bar.className = 'chart-bar';
+    bar.style.height = '0%';
+    bar.innerHTML = `<div class="tooltip">$${v.toLocaleString()}</div>`;
+    chart.appendChild(bar);
+    setTimeout(() => bar.style.height = (v/max*100) + '%', 100 + i*80);
+    labels.innerHTML += `<span>${days[i]}</span>`;
+  });
+
+  // Lanes Chart
+  const lanes = [['CHI→MEM',28400],['MEM→NSH',22100],['ATL→DAL',19800],['DET→CHI',16200],['IND→STL',14800]];
+  const lMax = Math.max(...lanes.map(l=>l[1]));
+  const lChart = document.getElementById('lanes-chart');
+  const lLabels = document.getElementById('lanes-labels');
+  lanes.forEach(([name,val],i) => {
+    const bar = document.createElement('div');
+    bar.className = 'chart-bar';
+    bar.style.height = '0%';
+    bar.innerHTML = `<div class="tooltip">${name}: $${val.toLocaleString()}</div>`;
+    lChart.appendChild(bar);
+    setTimeout(() => bar.style.height = (val/lMax*100) + '%', 200 + i*100);
+    lLabels.innerHTML += `<span>${name}</span>`;
+  });
+
+  // Top Drivers
+  const drivers = [['Marcus Reed',42800,'var(--blue)'],['James Torres',38200,'var(--green)'],['DeShawn Williams',31600,'var(--orange)'],['Alex Kim',28400,'#8b5cf6'],['Sarah Baker',22100,'#ec4899']];
+  const dl = document.getElementById('top-drivers');
+  drivers.forEach(([name,amt],i) => {
+    dl.innerHTML += `<li><div class="fin-rank${i===0?' top':''}">${i+1}</div><div class="fin-name">${name}</div><div class="fin-amount">$${amt.toLocaleString()}</div></li>`;
+  });
+
+  // Contacts
+  const contacts = [
+    ['Marcus Reed','Driver','(762) 555-0142','active','CHI → MEM'],['James Torres','Driver','(762) 555-0198','active','MEM → NSH'],
+    ['DeShawn Williams','Driver','(762) 555-0231','active','ATL → DAL'],['Alex Kim','Driver','(762) 555-0267','pending','DET → CHI'],
+    ['Sarah Baker','Driver','(762) 555-0304','active','IND → STL'],['Chris Wagner','Manager','(762) 555-0001','active','—'],
+    ['Mike Johnson','Supervisor','(762) 555-0045','active','—'],['Tony Russo','Driver','(762) 555-0388','offline','—'],
+    ['Ray Henderson','Driver','(762) 555-0412','active','STL → KC'],['Luis Morales','Driver','(762) 555-0455','active','DAL → HOU'],
+  ];
+  const cb = document.getElementById('contacts-body');
+  contacts.forEach(([name,role,phone,status,lane]) => {
+    cb.innerHTML += `<tr><td style="font-weight:600">${name}</td><td>${role}</td><td style="color:var(--muted)">${phone}</td><td><span class="status ${status}">${status}</span></td><td style="color:var(--muted)">${lane}</td></tr>`;
+  });
+
+  // Schedule
+  const schedDays = ['Time','Mon 7/28','Tue 7/29','Wed 7/30','Thu 7/31','Fri 8/1','Sat 8/2','Sun 8/3'];
+  const sg = document.getElementById('schedule-grid');
+  schedDays.forEach(d => { sg.innerHTML += `<div class="schedule-header">${d}</div>`; });
+  const times = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM'];
+  const events = {
+    '8-0': ['Pickup: CHI', 'blue'], '9-0': ['Transit', 'green'],
+    '10-1': ['Delivery: MEM', 'orange'], '11-1': ['Backhaul: NSH', 'blue'],
+    '8-2': ['Pickup: ATL', 'blue'], '14-2': ['Rest Stop', 'green'],
+    '9-3': ['Delivery: DAL', 'orange'], '13-3': ['Fuel + Rest', 'green'],
+    '7-4': ['Pickup: DET', 'blue'], '15-4': ['Transit to CHI', 'green'],
+  ];
+  times.forEach((t, ti) => {
+    sg.innerHTML += `<div class="schedule-time">${t}</div>`;
+    for (let d = 0; d < 7; d++) {
+      const key = ti + '-' + d;
+      const ev = events[key];
+      sg.innerHTML += `<div class="schedule-cell">${ev ? `<div class="schedule-event ${ev[1]}">${ev[0]}</div>` : ''}</div>`;
+    }
+  });
+
+  // Chat send
+  const chatInput = document.getElementById('chat-input');
+  const chatSend = document.getElementById('chat-send');
+  const chatMessages = document.getElementById('chat-messages');
+  function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+    const msg = document.createElement('div');
+    msg.className = 'msg sent';
+    msg.innerHTML = text + '<div class="time">Just now</div>';
+    chatMessages.appendChild(msg);
+    chatInput.value = '';
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    setTimeout(() => {
+      const replies = ['Copy that.','On it.','10-4.','Will do.','Acknowledged.','Standing by.'];
+      const reply = document.createElement('div');
+      reply.className = 'msg received';
+      reply.innerHTML = replies[Math.floor(Math.random()*replies.length)] + '<div class="time">Just now</div>';
+      chatMessages.appendChild(reply);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }, 1000 + Math.random()*1000);
+  }
+  chatSend.addEventListener('click', sendMessage);
+  chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+</script>
+
+</body>
+</html>

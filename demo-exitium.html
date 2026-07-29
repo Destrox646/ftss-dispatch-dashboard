@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exitium — Interactive Demo</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0a0a0a; --surface: #141414; --surface2: #1c1c1c; --border: #2a2218;
+      --text: #f0e8e0; --muted: #9a9088; --dim: #6a6058;
+      --orange: #ff6a00; --orange-hover: #e55d00; --orange-dim: rgba(255,106,0,.12);
+      --amber: #ff9e3d; --green: #ff8c00;
+    }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .back-link {
+      position: fixed; top: 10px; left: 10px; z-index: 100;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 6px 12px; font-size: 12px; color: var(--muted); cursor: pointer; transition: all .15s;
+    }
+    .back-link:hover { color: var(--text); border-color: var(--muted); }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--surface);
+    }
+    .topbar-brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 800; color: var(--orange); }
+    .topbar-brand .demo-tag { font-size: 10px; color: var(--dim); background: var(--bg); padding: 2px 8px; border-radius: 4px; font-weight: 400; }
+
+    .content { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+
+    /* Pipeline */
+    .pipeline-section { margin-bottom: 32px; }
+    .pipeline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .pipeline-header h2 { font-size: 20px; font-weight: 700; }
+    .run-btn {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--orange); color: #fff; border: none; border-radius: 12px;
+      padding: 12px 28px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all .2s;
+    }
+    .run-btn:hover { background: var(--orange-hover); transform: translateY(-1px); }
+    .run-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .run-btn.running { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,106,0,.4); } 50% { box-shadow: 0 0 0 10px rgba(255,106,0,0); } }
+
+    .pipeline-steps { display: flex; gap: 0; margin-bottom: 28px; position: relative; }
+    .pipeline-step {
+      flex: 1; text-align: center; position: relative; cursor: pointer;
+    }
+    .step-line {
+      position: absolute; top: 20px; left: 50%; right: -50%; height: 2px; background: var(--border); z-index: 0;
+    }
+    .pipeline-step:last-child .step-line { display: none; }
+    .step-line.active { background: var(--orange); }
+    .step-dot {
+      width: 40px; height: 40px; border-radius: 50%; background: var(--surface); border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; position: relative; z-index: 1;
+      font-size: 16px; transition: all .3s;
+    }
+    .step-dot.active { border-color: var(--orange); background: var(--orange-dim); }
+    .step-dot.done { border-color: var(--orange); background: var(--orange); color: #fff; }
+    .step-dot.running { border-color: var(--orange); animation: pulse-dot 1s infinite; }
+    @keyframes pulse-dot { 0%,100% { box-shadow: 0 0 0 0 rgba(255,106,0,.5); } 50% { box-shadow: 0 0 0 8px rgba(255,106,0,0); } }
+    .step-label { font-size: 12px; font-weight: 600; color: var(--dim); transition: color .2s; }
+    .step-label.active { color: var(--orange); }
+    .step-sub { font-size: 10px; color: var(--dim); margin-top: 2px; }
+
+    /* Source */
+    .source-section { margin-bottom: 24px; }
+    .source-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+    .source-input {
+      width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px 18px; color: var(--text); font-size: 14px; outline: none;
+    }
+    .source-input:focus { border-color: var(--orange); }
+
+    /* Options */
+    .options-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .opt-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+    }
+    .opt-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      padding: 6px 12px; font-size: 12px; color: var(--muted); cursor: pointer; transition: all .15s; user-select: none;
+    }
+    .chip:hover { border-color: var(--orange); color: var(--text); }
+    .chip.active { background: var(--orange-dim); border-color: var(--orange); color: var(--orange); font-weight: 600; }
+
+    /* Log */
+    .log-section { margin-bottom: 24px; }
+    .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .log-title { font-size: 13px; font-weight: 600; }
+    .log-clear { font-size: 11px; color: var(--dim); cursor: pointer; }
+    .log-clear:hover { color: var(--muted); }
+    .log-box {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px;
+      color: var(--dim); max-height: 200px; overflow-y: auto; line-height: 1.6;
+    }
+    .log-line { margin-bottom: 2px; }
+    .log-line .time { color: var(--dim); margin-right: 8px; }
+    .log-line.info { color: var(--muted); }
+    .log-line.success { color: var(--orange); }
+    .log-line.warn { color: #ffb347; }
+    .log-line.running { color: var(--amber); }
+
+    /* Output Preview */
+    .output-section { display: none; }
+    .output-section.visible { display: block; }
+    .output-card {
+      background: var(--surface); border: 1px solid var(--orange); border-radius: 14px;
+      padding: 24px; box-shadow: 0 0 30px rgba(255,106,0,.08);
+    }
+    .output-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .output-title { font-size: 15px; font-weight: 700; color: var(--orange); }
+    .output-badge { font-size: 11px; background: var(--orange-dim); color: var(--orange); padding: 4px 10px; border-radius: 6px; font-weight: 600; }
+
+    .output-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .output-info { }
+    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .info-row:last-child { border-bottom: none; }
+    .info-key { color: var(--muted); }
+    .info-val { font-weight: 600; }
+
+    .subtitle-preview {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px; font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.8;
+      max-height: 200px; overflow-y: auto; color: var(--dim);
+    }
+    .sub-line { margin-bottom: 6px; }
+    .sub-time { color: var(--orange); margin-right: 8px; }
+    .sub-text { color: var(--text); }
+
+    /* Subtitle Editor */
+    .sub-editor { margin-top: 24px; }
+    .sub-editor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .sub-editor-title { font-size: 14px; font-weight: 600; }
+    .sub-toggle { display: flex; gap: 4px; }
+    .sub-toggle-btn {
+      padding: 5px 12px; border-radius: 6px; font-size: 11px; color: var(--muted); cursor: pointer;
+      border: 1px solid var(--border); background: var(--bg); transition: all .15s;
+    }
+    .sub-toggle-btn.active { background: var(--orange-dim); border-color: var(--orange); color: var(--orange); }
+
+    .sub-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+
+    /* Slider */
+    .slider-wrap { margin-bottom: 4px; }
+    .slider-track { height: 4px; background: var(--bg); border-radius: 4px; position: relative; cursor: pointer; }
+    .slider-fill { height: 100%; background: var(--orange); border-radius: 4px; position: absolute; left: 0; top: 0; }
+    .slider-thumb {
+      width: 14px; height: 14px; background: var(--orange); border-radius: 50%;
+      position: absolute; top: 50%; transform: translate(-50%, -50%); cursor: grab;
+    }
+    .slider-val { font-size: 11px; color: var(--muted); text-align: center; margin-top: 6px; }
+
+    .action-row { display: flex; gap: 10px; margin-top: 24px; }
+    .action-btn {
+      flex: 1; padding: 12px; border-radius: 12px; border: none; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all .15s;
+    }
+    .action-btn.primary { background: var(--orange); color: #fff; }
+    .action-btn.primary:hover { background: var(--orange-hover); }
+    .action-btn.secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .action-btn.secondary:hover { border-color: var(--muted); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--orange);
+      border-radius: 12px; padding: 14px 20px; font-size: 13px; display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.5); transform: translateY(100px); opacity: 0; transition: all .3s; z-index: 200;
+    }
+    .toast.visible { transform: translateY(0); opacity: 1; }
+
+    @media (max-width: 640px) {
+      .output-grid { grid-template-columns: 1fr; }
+      .options-row { grid-template-columns: 1fr; }
+      .pipeline-step .step-sub { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">&larr; Back to Destrox64</a>
+
+<div class="topbar">
+  <div class="topbar-brand">&#128293; Exitium <span class="demo-tag">DEMO</span></div>
+</div>
+
+<div class="content">
+
+  <!-- Pipeline Steps -->
+  <div class="pipeline-section">
+    <div class="pipeline-header">
+      <h2>Pipeline</h2>
+      <button class="run-btn" id="run-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Run Pipeline
+      </button>
+    </div>
+
+    <div class="pipeline-steps" id="pipeline-steps">
+      <div class="pipeline-step" data-step="0">
+        <div class="step-line"></div>
+        <div class="step-dot active">&#11015;</div>
+        <div class="step-label active">Download</div>
+        <div class="step-sub">Fetch source video</div>
+      </div>
+      <div class="pipeline-step" data-step="1">
+        <div class="step-line"></div>
+        <div class="step-dot">&#9986;</div>
+        <div class="step-label">Smart Cut</div>
+        <div class="step-sub">Trim segments</div>
+      </div>
+      <div class="pipeline-step" data-step="2">
+        <div class="step-line"></div>
+        <div class="step-dot">&#127908;</div>
+        <div class="step-label">Transcribe</div>
+        <div class="step-sub">Whisper AI</div>
+      </div>
+      <div class="pipeline-step" data-step="3">
+        <div class="step-line"></div>
+        <div class="step-dot">&#128172;</div>
+        <div class="step-label">Subtitles</div>
+        <div class="step-sub">Sync &amp; style</div>
+      </div>
+      <div class="pipeline-step" data-step="4">
+        <div class="step-dot">&#10003;</div>
+        <div class="step-label">Output</div>
+        <div class="step-sub">Final file</div>
+      </div>
+    </div>
+
+    <!-- Source -->
+    <div class="source-section">
+      <div class="source-label">Source URL or File</div>
+      <input class="source-input" id="source-input" placeholder="https://youtube.com/watch?v=..." value="https://www.youtube.com/watch?v=example123" />
+    </div>
+
+    <!-- Options -->
+    <div class="options-row">
+      <div class="opt-card">
+        <div class="opt-label">Output Format</div>
+        <div class="chip-row" data-group="format">
+          <div class="chip active" data-val="mp4">MP4</div>
+          <div class="chip" data-val="webm">WebM</div>
+          <div class="chip" data-val="mkv">MKV</div>
+        </div>
+      </div>
+      <div class="opt-card">
+        <div class="opt-label">Whisper Model</div>
+        <div class="chip-row" data-group="whisper">
+          <div class="chip" data-val="tiny">Tiny</div>
+          <div class="chip" data-val="base">Base</div>
+          <div class="chip active" data-val="small">Small</div>
+          <div class="chip" data-val="medium">Medium</div>
+        </div>
+      </div>
+      <div class="opt-card">
+        <div class="opt-label">Video Quality</div>
+        <div class="chip-row" data-group="quality">
+          <div class="chip active" data-val="best">Best</div>
+          <div class="chip" data-val="1080p">1080p</div>
+          <div class="chip" data-val="720p">720p</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="log-section">
+      <div class="log-header">
+        <div class="log-title">Pipeline Log</div>
+        <div class="log-clear" id="log-clear">Clear</div>
+      </div>
+      <div class="log-box" id="log-box">
+        <div class="log-line info"><span class="time">[--:--:--]</span>Ready. Configure options and click Run Pipeline.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Output Preview (hidden until pipeline runs) -->
+  <div class="output-section" id="output-section">
+    <div class="output-card">
+      <div class="output-header">
+        <div class="output-title">Pipeline Complete</div>
+        <div class="output-badge">&#10003; Success</div>
+      </div>
+
+      <div class="output-grid">
+        <div class="output-info">
+          <div class="info-row"><span class="info-key">Source</span><span class="info-val" id="out-source">youtube.com</span></div>
+          <div class="info-row"><span class="info-key">Duration</span><span class="info-val" id="out-duration">4:32</span></div>
+          <div class="info-row"><span class="info-key">Output</span><span class="info-val" id="out-format">MP4 / Best</span></div>
+          <div class="info-row"><span class="info-key">Whisper</span><span class="info-val" id="out-whisper">Small</span></div>
+          <div class="info-row"><span class="info-key">File Size</span><span class="info-val" id="out-size">142.8 MB</span></div>
+          <div class="info-row"><span class="info-key">Subtitles</span><span class="info-val" id="out-subs">48 lines</span></div>
+          <div class="info-row"><span class="info-key">Total Time</span><span class="info-val" id="out-time">1m 24s</span></div>
+        </div>
+        <div>
+          <div class="opt-label" style="margin-bottom:10px">Subtitle Preview</div>
+          <div class="subtitle-preview" id="subtitle-preview"></div>
+        </div>
+      </div>
+
+      <!-- Subtitle Editor -->
+      <div class="sub-editor">
+        <div class="sub-editor-header">
+          <div class="sub-editor-title">Subtitle Style</div>
+          <div class="sub-toggle">
+            <div class="sub-toggle-btn active" data-style="default">Default</div>
+            <div class="sub-toggle-btn" data-style="bold">Bold</div>
+            <div class="sub-toggle-btn" data-style="minimal">Minimal</div>
+          </div>
+        </div>
+        <div class="sub-options">
+          <div class="opt-card">
+            <div class="opt-label">Font Size</div>
+            <div class="slider-wrap" data-slider="fontsize">
+              <div class="slider-track">
+                <div class="slider-fill" style="width:60%"></div>
+                <div class="slider-thumb" style="left:60%"></div>
+              </div>
+              <div class="slider-val">24px</div>
+            </div>
+          </div>
+          <div class="opt-card">
+            <div class="opt-label">Position</div>
+            <div class="chip-row" data-group="position">
+              <div class="chip" data-val="top">Top</div>
+              <div class="chip active" data-val="bottom">Bottom</div>
+              <div class="chip" data-val="center">Center</div>
+            </div>
+          </div>
+          <div class="opt-card">
+            <div class="opt-label">Color</div>
+            <div class="chip-row" data-group="color">
+              <div class="chip active" data-val="white">White</div>
+              <div class="chip" data-val="yellow">Yellow</div>
+              <div class="chip" data-val="cyan">Cyan</div>
+            </div>
+          </div>
+          <div class="opt-card">
+            <div class="opt-label">Background</div>
+            <div class="chip-row" data-group="bg">
+              <div class="chip" data-val="none">None</div>
+              <div class="chip active" data-val="semi">Semi</div>
+              <div class="chip" data-val="solid">Solid</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="action-btn secondary" id="btn-preview">Preview Subtitles</button>
+          <button class="action-btn primary" id="btn-export">Export Final Video</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">
+  <span style="color:var(--orange)">&#10003;</span>
+  <span id="toast-text">Done!</span>
+</div>
+
+<script>
+  // Chip selection
+  document.querySelectorAll('.chip-row').forEach(row => {
+    row.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        row.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+    });
+  });
+
+  // Style toggle
+  document.querySelectorAll('.sub-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.sub-toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      showToast('Style changed to ' + btn.dataset.style);
+    });
+  });
+
+  // Slider
+  document.querySelectorAll('.slider-wrap').forEach(container => {
+    const track = container.querySelector('.slider-track');
+    const fill = container.querySelector('.slider-fill');
+    const thumb = container.querySelector('.slider-thumb');
+    const valEl = container.querySelector('.slider-val');
+    let dragging = false;
+
+    function update(e) {
+      const rect = track.getBoundingClientRect();
+      let pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      fill.style.width = (pct * 100) + '%';
+      thumb.style.left = (pct * 100) + '%';
+      const size = Math.round(12 + pct * 36);
+      valEl.textContent = size + 'px';
+    }
+
+    track.addEventListener('mousedown', e => { dragging = true; update(e); });
+    thumb.addEventListener('mousedown', e => { dragging = true; e.stopPropagation(); });
+    document.addEventListener('mousemove', e => { if (dragging) update(e); });
+    document.addEventListener('mouseup', () => { dragging = false; });
+  });
+
+  // Pipeline
+  const runBtn = document.getElementById('run-btn');
+  const logBox = document.getElementById('log-box');
+  const outputSection = document.getElementById('output-section');
+
+  const stepDots = document.querySelectorAll('.step-dot');
+  const stepLabels = document.querySelectorAll('.step-label');
+  const stepLines = document.querySelectorAll('.step-line');
+
+  function log(text, type = 'info') {
+    const now = new Date();
+    const time = now.toTimeString().split(' ')[0];
+    const line = document.createElement('div');
+    line.className = 'log-line ' + type;
+    line.innerHTML = `<span class="time">[${time}]</span>${text}`;
+    logBox.appendChild(line);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  function setStep(idx, state) {
+    const dot = stepDots[idx];
+    const label = stepLabels[idx];
+    dot.className = 'step-dot';
+    label.className = 'step-label';
+    if (state === 'running') { dot.classList.add('running'); label.classList.add('active'); }
+    else if (state === 'done') { dot.classList.add('done'); dot.innerHTML = '&#10003;'; }
+    else if (state === 'active') { dot.classList.add('active'); label.classList.add('active'); }
+    if (idx > 0 && state !== 'idle') stepLines[idx - 1].classList.add('active');
+  }
+
+  const subtitleLines = [
+    ['00:00:01', 'Welcome to this tutorial on video processing.'],
+    ['00:00:04', 'Today we will explore how AI can transcribe'],
+    ['00:00:07', 'and subtitle any video automatically.'],
+    ['00:00:10', 'First, let\'s look at the source material.'],
+    ['00:00:14', 'The video is downloaded at the best quality.'],
+    ['00:00:18', 'Then we apply smart cutting to trim silence.'],
+    ['00:00:22', 'Whisper AI processes the audio track.'],
+    ['00:00:26', 'Each word is timestamped for precise sync.'],
+    ['00:00:30', 'Subtitles are styled and positioned.'],
+    ['00:00:34', 'The final output combines everything.'],
+    ['00:00:38', 'One pipeline, fully automated.'],
+    ['00:00:42', 'This is the power of Exitium.'],
+  ];
+
+  function populateSubtitlePreview() {
+    const sp = document.getElementById('subtitle-preview');
+    sp.innerHTML = '';
+    subtitleLines.forEach(([time, text]) => {
+      sp.innerHTML += `<div class="sub-line"><span class="sub-time">${time}</span><span class="sub-text">${text}</span></div>`;
+    });
+  }
+
+  runBtn.addEventListener('click', () => {
+    runBtn.disabled = true;
+    runBtn.classList.add('running');
+    runBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Running...';
+    outputSection.classList.remove('visible');
+
+    // Reset steps
+    stepDots.forEach((d, i) => { d.innerHTML = i === 0 ? '&#11015;' : ['&#9986;','&#127908;','&#128172;','&#10003;'][i-1] || ''; d.className = 'step-dot'; });
+    stepLabels.forEach(l => l.className = 'step-label');
+    stepLines.forEach(l => l.classList.remove('active'));
+
+    logBox.innerHTML = '';
+    log('Pipeline started', 'info');
+
+    const steps = [
+      { delay: 400, msgs: [
+        ['Connecting to source...', 'info'],
+        ['Fetching video metadata...', 'info'],
+        ['Title: "Advanced Video Processing Tutorial"', 'info'],
+        ['Duration: 4:32 | Quality: 1080p', 'info'],
+        ['Download started...', 'running'],
+        ['Downloading... 24%', 'running'],
+        ['Downloading... 58%', 'running'],
+        ['Downloading... 87%', 'running'],
+        ['Download complete (142.8 MB)', 'success'],
+      ]},
+      { delay: 300, msgs: [
+        ['Analyzing audio for silence...', 'info'],
+        ['Found 3 segments to trim', 'info'],
+        ['Cutting: 0:00-0:02 (intro silence)', 'info'],
+        ['Cutting: 2:15-2:18 (gap)', 'info'],
+        ['Cutting: 4:28-4:32 (outro noise)', 'info'],
+        ['Smart cut complete — saved 7 seconds', 'success'],
+      ]},
+      { delay: 500, msgs: [
+        ['Loading Whisper model (small)...', 'running'],
+        ['Model loaded in 2.1s', 'info'],
+        ['Transcribing audio track...', 'running'],
+        ['Processing 4:25 of audio...', 'running'],
+        ['Detected language: English (99.2% confidence)', 'info'],
+        ['Transcription complete — 48 subtitle lines', 'success'],
+      ]},
+      { delay: 300, msgs: [
+        ['Generating SRT file...', 'info'],
+        ['Style: Default | Size: 24px | Position: Bottom', 'info'],
+        ['Color: White | Background: Semi-transparent', 'info'],
+        ['Burning subtitles into video...', 'running'],
+        ['Subtitles synced and applied', 'success'],
+      ]},
+      { delay: 200, msgs: [
+        ['Concatenating final output...', 'running'],
+        ['Encoding: MP4 / H.264 / yuv420p', 'info'],
+        ['Output: video_processed.mp4 (148.2 MB)', 'success'],
+        ['Pipeline complete in 1m 24s', 'success'],
+      ]},
+    ];
+
+    let totalDelay = 0;
+    steps.forEach((step, si) => {
+      step.msgs.forEach((msg, mi) => {
+        totalDelay += step.delay + Math.random() * 200;
+        setTimeout(() => {
+          if (mi === 0) setStep(si, 'running');
+          log(msg[0], msg[1]);
+        }, totalDelay);
+      });
+      totalDelay += 200;
+      setTimeout(() => {
+        setStep(si, 'done');
+        if (si < 4) setStep(si + 1, 'active');
+      }, totalDelay);
+    });
+
+    totalDelay += 400;
+    setTimeout(() => {
+      setStep(4, 'done');
+      log('All steps complete!', 'success');
+
+      // Show output
+      const format = document.querySelector('[data-group="format"] .chip.active').dataset.val.toUpperCase();
+      const whisper = document.querySelector('[data-group="whisper"] .chip.active').dataset.val;
+      const quality = document.querySelector('[data-group="quality"] .chip.active').dataset.val;
+      document.getElementById('out-format').textContent = format + ' / ' + quality;
+      document.getElementById('out-whisper').textContent = whisper.charAt(0).toUpperCase() + whisper.slice(1);
+      populateSubtitlePreview();
+      outputSection.classList.add('visible');
+
+      runBtn.disabled = false;
+      runBtn.classList.remove('running');
+      runBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Pipeline';
+    }, totalDelay);
+  });
+
+  // Log clear
+  document.getElementById('log-clear').addEventListener('click', () => {
+    logBox.innerHTML = '<div class="log-line info"><span class="time">[--:--:--]</span>Log cleared.</div>';
+  });
+
+  // Export button
+  document.getElementById('btn-export').addEventListener('click', () => {
+    showToast('Exported: video_processed.mp4');
+  });
+
+  document.getElementById('btn-preview').addEventListener('click', () => {
+    showToast('Subtitle preview refreshed');
+  });
+
+  function showToast(text) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toast-text').textContent = text;
+    toast.classList.add('visible');
+    setTimeout(() => toast.classList.remove('visible'), 3000);
+  }
+</script>
+
+</body>
+</html>

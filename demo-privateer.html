@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privateer — Interactive Demo</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0a0c10; --surface: #141620; --surface2: #1c1f2e; --border: #2a2d3e;
+      --text: #e8eaed; --muted: #9aa0b0; --dim: #6b7280;
+      --green: #22c55e; --green-hover: #16a34a; --green-dim: rgba(34,197,94,.15);
+      --blue: #3b82f6; --red: #ef4444;
+    }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .back-link {
+      position: fixed; top: 10px; left: 10px; z-index: 100;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 6px 12px; font-size: 12px; color: var(--muted); cursor: pointer; transition: all .15s;
+    }
+    .back-link:hover { color: var(--text); border-color: var(--muted); }
+
+    /* Topbar */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--surface);
+    }
+    .topbar-brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 800; color: var(--green); }
+    .topbar-brand .demo-tag { font-size: 10px; color: var(--dim); background: var(--bg); padding: 2px 8px; border-radius: 4px; font-weight: 400; }
+    .topbar-tabs { display: flex; gap: 4px; }
+    .topbar-tab {
+      padding: 7px 16px; border-radius: 8px; font-size: 13px; color: var(--muted); cursor: pointer; transition: all .15s;
+    }
+    .topbar-tab:hover { color: var(--text); background: var(--surface2); }
+    .topbar-tab.active { background: var(--green); color: #fff; font-weight: 600; }
+
+    .content { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+
+    /* Views */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* Download View */
+    .url-section { margin-bottom: 28px; }
+    .url-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+    .url-input-row { display: flex; gap: 10px; }
+    .url-input {
+      flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px 18px; color: var(--text); font-size: 14px; outline: none; transition: border-color .2s;
+    }
+    .url-input:focus { border-color: var(--green); }
+    .url-input::placeholder { color: var(--dim); }
+    .paste-btn {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px 20px; color: var(--muted); font-size: 13px; cursor: pointer; transition: all .15s;
+    }
+    .paste-btn:hover { border-color: var(--green); color: var(--text); }
+
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+    .option-group { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+    .option-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+    .chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 16px; font-size: 13px; color: var(--muted); cursor: pointer; transition: all .15s; user-select: none;
+    }
+    .chip:hover { border-color: var(--green); color: var(--text); }
+    .chip.active { background: var(--green-dim); border-color: var(--green); color: var(--green); font-weight: 600; }
+
+    .download-btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      background: var(--green); color: #fff; border: none; border-radius: 14px;
+      padding: 16px 32px; font-size: 16px; font-weight: 700; cursor: pointer;
+      width: 100%; transition: all .2s; margin-bottom: 20px;
+    }
+    .download-btn:hover { background: var(--green-hover); transform: translateY(-1px); }
+    .download-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    /* Progress */
+    .progress-section { display: none; margin-bottom: 28px; }
+    .progress-section.visible { display: block; }
+    .progress-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px;
+    }
+    .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .progress-title { font-size: 14px; font-weight: 600; }
+    .progress-pct { font-size: 14px; font-weight: 700; color: var(--green); }
+    .progress-bar { height: 8px; background: var(--bg); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+    .progress-fill { height: 100%; background: var(--green); border-radius: 8px; transition: width .3s ease; width: 0%; }
+    .progress-details { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); }
+    .progress-status { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+    /* Download history */
+    .history { margin-top: 32px; }
+    .history-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+    .history-item {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px 18px; margin-bottom: 8px; transition: border-color .15s;
+    }
+    .history-item:hover { border-color: var(--green); }
+    .history-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--green-dim); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .history-info { flex: 1; min-width: 0; }
+    .history-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .history-meta { font-size: 11px; color: var(--dim); margin-top: 2px; }
+    .history-actions { display: flex; gap: 8px; }
+    .history-btn {
+      padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2);
+      color: var(--muted); font-size: 11px; cursor: pointer; transition: all .15s;
+    }
+    .history-btn:hover { border-color: var(--green); color: var(--text); }
+
+    /* Edit View */
+    .drop-zone {
+      border: 2px dashed var(--border); border-radius: 16px; padding: 48px; text-align: center;
+      margin-bottom: 28px; transition: all .2s; cursor: pointer;
+    }
+    .drop-zone:hover, .drop-zone.dragover { border-color: var(--green); background: var(--green-dim); }
+    .drop-zone .icon { font-size: 36px; margin-bottom: 12px; }
+    .drop-zone .text { font-size: 14px; color: var(--muted); }
+    .drop-zone .sub { font-size: 12px; color: var(--dim); margin-top: 6px; }
+
+    .edit-panel {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px;
+      display: none; margin-bottom: 20px;
+    }
+    .edit-panel.visible { display: block; }
+    .edit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .edit-title { font-size: 15px; font-weight: 700; }
+    .edit-file { font-size: 12px; color: var(--dim); }
+
+    .edit-section { margin-bottom: 20px; }
+    .edit-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+
+    .trim-row { display: flex; gap: 10px; align-items: center; }
+    .trim-input {
+      flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 14px; color: var(--text); font-size: 13px; text-align: center; outline: none;
+    }
+    .trim-input:focus { border-color: var(--green); }
+    .trim-sep { color: var(--dim); font-size: 13px; }
+
+    .slider-container { position: relative; padding: 8px 0; }
+    .slider-track { height: 6px; background: var(--bg); border-radius: 6px; position: relative; cursor: pointer; }
+    .slider-fill { height: 100%; background: var(--green); border-radius: 6px; position: absolute; left: 0; top: 0; }
+    .slider-thumb {
+      width: 18px; height: 18px; background: var(--green); border-radius: 50%;
+      position: absolute; top: 50%; transform: translate(-50%, -50%); cursor: grab;
+      box-shadow: 0 2px 8px rgba(34,197,94,.3);
+    }
+    .slider-value { text-align: center; font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+    .waveform {
+      height: 60px; background: var(--bg); border-radius: 10px; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 2px; padding: 0 10px; overflow: hidden;
+    }
+    .wave-bar { width: 3px; background: var(--green); border-radius: 2px; opacity: .6; transition: opacity .15s; }
+    .wave-bar:hover { opacity: 1; }
+
+    .edit-actions { display: flex; gap: 10px; margin-top: 24px; }
+    .edit-btn {
+      flex: 1; padding: 12px; border-radius: 12px; border: none; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all .15s;
+    }
+    .edit-btn.primary { background: var(--green); color: #fff; }
+    .edit-btn.primary:hover { background: var(--green-hover); }
+    .edit-btn.secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .edit-btn.secondary:hover { border-color: var(--muted); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--green);
+      border-radius: 12px; padding: 14px 20px; font-size: 13px; display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4); transform: translateY(100px); opacity: 0; transition: all .3s; z-index: 200;
+    }
+    .toast.visible { transform: translateY(0); opacity: 1; }
+
+    @media (max-width: 640px) {
+      .options-grid { grid-template-columns: 1fr; }
+      .url-input-row { flex-direction: column; }
+      .topbar-tabs { gap: 2px; }
+      .topbar-tab { padding: 7px 10px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">&larr; Back to Destrox64</a>
+
+<div class="topbar">
+  <div class="topbar-brand">&#9876; Privateer <span class="demo-tag">DEMO</span></div>
+  <div class="topbar-tabs">
+    <div class="topbar-tab active" data-view="download">Download</div>
+    <div class="topbar-tab" data-view="edit">Edit</div>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- DOWNLOAD VIEW -->
+  <div class="view active" id="view-download">
+    <div class="url-section">
+      <div class="url-label">Paste URL</div>
+      <div class="url-input-row">
+        <input class="url-input" id="url-input" placeholder="https://youtube.com/watch?v=..." />
+        <button class="paste-btn" id="paste-btn">Paste</button>
+      </div>
+    </div>
+
+    <div class="options-grid">
+      <div class="option-group">
+        <div class="option-label">Format</div>
+        <div class="chip-row" data-group="format">
+          <div class="chip active" data-val="mp4">MP4</div>
+          <div class="chip" data-val="mp3">MP3</div>
+          <div class="chip" data-val="webm">WebM</div>
+          <div class="chip" data-val="wav">WAV</div>
+        </div>
+      </div>
+      <div class="option-group">
+        <div class="option-label">Quality</div>
+        <div class="chip-row" data-group="quality">
+          <div class="chip active" data-val="best">Best</div>
+          <div class="chip" data-val="1080p">1080p</div>
+          <div class="chip" data-val="720p">720p</div>
+          <div class="chip" data-val="audio">Audio Only</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="download-btn" id="download-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download
+    </button>
+
+    <div class="progress-section" id="progress-section">
+      <div class="progress-card">
+        <div class="progress-header">
+          <div class="progress-title" id="progress-title">Downloading...</div>
+          <div class="progress-pct" id="progress-pct">0%</div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="progress-details">
+          <span id="progress-speed">0 MB/s</span>
+          <span id="progress-eta">Estimating...</span>
+        </div>
+        <div class="progress-status" id="progress-status">Connecting to server...</div>
+      </div>
+    </div>
+
+    <div class="history">
+      <div class="history-title">Recent Downloads</div>
+      <div id="history-list">
+        <div class="history-item">
+          <div class="history-icon">&#127916;</div>
+          <div class="history-info">
+            <div class="history-name">Rick Astley - Never Gonna Give You Up.mp4</div>
+            <div class="history-meta">MP4 &middot; 1080p &middot; 48.2 MB &middot; 2 min ago</div>
+          </div>
+          <div class="history-actions">
+            <button class="history-btn">Open</button>
+            <button class="history-btn">Edit</button>
+          </div>
+        </div>
+        <div class="history-item">
+          <div class="history-icon">&#127925;</div>
+          <div class="history-info">
+            <div class="history-name">Lo-fi Beats - Study Mix.mp3</div>
+            <div class="history-meta">MP3 &middot; Best &middot; 12.8 MB &middot; 15 min ago</div>
+          </div>
+          <div class="history-actions">
+            <button class="history-btn">Open</button>
+            <button class="history-btn">Edit</button>
+          </div>
+        </div>
+        <div class="history-item">
+          <div class="history-icon">&#127916;</div>
+          <div class="history-info">
+            <div class="history-name">Nature Documentary - Ocean Depths.mp4</div>
+            <div class="history-meta">MP4 &middot; 720p &middot; 124.5 MB &middot; 1 hour ago</div>
+          </div>
+          <div class="history-actions">
+            <button class="history-btn">Open</button>
+            <button class="history-btn">Edit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT VIEW -->
+  <div class="view" id="view-edit">
+    <div class="drop-zone" id="drop-zone">
+      <div class="icon">&#11015;</div>
+      <div class="text">Drop a video or audio file here</div>
+      <div class="sub">or click to browse &middot; MP4, WebM, MP3, WAV, MKV</div>
+    </div>
+
+    <div class="edit-panel" id="edit-panel">
+      <div class="edit-header">
+        <div class="edit-title">Edit File</div>
+        <div class="edit-file" id="edit-filename">example_video.mp4</div>
+      </div>
+
+      <div class="edit-section">
+        <div class="edit-label">Waveform</div>
+        <div class="waveform" id="waveform"></div>
+      </div>
+
+      <div class="edit-section">
+        <div class="edit-label">Trim</div>
+        <div class="trim-row">
+          <input class="trim-input" value="0:00" id="trim-start" />
+          <span class="trim-sep">to</span>
+          <input class="trim-input" value="3:42" id="trim-end" />
+        </div>
+      </div>
+
+      <div class="edit-section">
+        <div class="edit-label">Volume</div>
+        <div class="slider-container" data-slider="volume">
+          <div class="slider-track">
+            <div class="slider-fill" style="width:50%"></div>
+            <div class="slider-thumb" style="left:50%"></div>
+          </div>
+          <div class="slider-value">100%</div>
+        </div>
+      </div>
+
+      <div class="edit-section">
+        <div class="edit-label">Compression</div>
+        <div class="chip-row" data-group="compress">
+          <div class="chip active" data-val="none">None</div>
+          <div class="chip" data-val="low">Low</div>
+          <div class="chip" data-val="med">Medium</div>
+          <div class="chip" data-val="high">High</div>
+        </div>
+      </div>
+
+      <div class="edit-section">
+        <div class="edit-label">Output Format</div>
+        <div class="chip-row" data-group="outformat">
+          <div class="chip active" data-val="mp4">MP4</div>
+          <div class="chip" data-val="mp3">MP3</div>
+          <div class="chip" data-val="webm">WebM</div>
+        </div>
+      </div>
+
+      <div class="edit-actions">
+        <button class="edit-btn secondary" id="edit-cancel">Cancel</button>
+        <button class="edit-btn primary" id="edit-save">Export File</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span style="color:var(--green)">&#10003;</span>
+  <span id="toast-text">File saved!</span>
+</div>
+
+<script>
+  // Tab switching
+  document.querySelectorAll('.topbar-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.topbar-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-' + tab.dataset.view).classList.add('active');
+    });
+  });
+
+  // Chip selection
+  document.querySelectorAll('.chip-row').forEach(row => {
+    row.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        row.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+    });
+  });
+
+  // Paste button (simulated)
+  document.getElementById('paste-btn').addEventListener('click', () => {
+    const urls = [
+      'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      'https://www.tiktok.com/@user/video/1234567890',
+      'https://www.instagram.com/reel/ABC123xyz',
+      'https://twitter.com/user/status/9876543210',
+    ];
+    document.getElementById('url-input').value = urls[Math.floor(Math.random() * urls.length)];
+  });
+
+  // Download simulation
+  const downloadBtn = document.getElementById('download-btn');
+  const progressSection = document.getElementById('progress-section');
+  const progressFill = document.getElementById('progress-fill');
+  const progressPct = document.getElementById('progress-pct');
+  const progressSpeed = document.getElementById('progress-speed');
+  const progressEta = document.getElementById('progress-eta');
+  const progressStatus = document.getElementById('progress-status');
+  const progressTitle = document.getElementById('progress-title');
+
+  downloadBtn.addEventListener('click', () => {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url) {
+      document.getElementById('url-input').value = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+    }
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = 'Downloading...';
+    progressSection.classList.add('visible');
+    progressFill.style.width = '0%';
+
+    let pct = 0;
+    const statuses = [
+      { at: 0, text: 'Connecting to server...' },
+      { at: 5, text: 'Fetching video info...' },
+      { at: 10, text: 'Downloading...' },
+      { at: 40, text: 'Downloading...' },
+      { at: 80, text: 'Processing...' },
+      { at: 95, text: 'Finalizing...' },
+      { at: 100, text: 'Complete!' },
+    ];
+
+    const interval = setInterval(() => {
+      pct += Math.random() * 3 + 1;
+      if (pct > 100) pct = 100;
+      progressFill.style.width = pct + '%';
+      progressPct.textContent = Math.round(pct) + '%';
+      progressSpeed.textContent = (Math.random() * 8 + 2).toFixed(1) + ' MB/s';
+      const remaining = Math.max(0, Math.ceil((100 - pct) / 5));
+      progressEta.textContent = remaining > 0 ? remaining + 's remaining' : 'Done!';
+
+      const status = statuses.filter(s => s.at <= pct).pop();
+      if (status) progressStatus.textContent = status.text;
+
+      if (pct >= 100) {
+        clearInterval(interval);
+        progressTitle.textContent = 'Download Complete';
+        progressPct.textContent = '100%';
+        progressPct.style.color = 'var(--green)';
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = 'Download';
+        showToast('Download complete! File saved to Downloads.');
+
+        // Add to history
+        const urlVal = document.getElementById('url-input').value;
+        let name = 'video.mp4';
+        if (urlVal.includes('youtube')) name = 'YouTube Video.mp4';
+        else if (urlVal.includes('tiktok')) name = 'TikTok Video.mp4';
+        else if (urlVal.includes('instagram')) name = 'Instagram Reel.mp4';
+        else if (urlVal.includes('twitter')) name = 'Twitter Video.mp4';
+
+        const format = document.querySelector('[data-group="format"] .chip.active').dataset.val.toUpperCase();
+        const quality = document.querySelector('[data-group="quality"] .chip.active').dataset.val;
+        const size = (Math.random() * 100 + 10).toFixed(1);
+
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.innerHTML = `
+          <div class="history-icon">&#127916;</div>
+          <div class="history-info">
+            <div class="history-name">${name}</div>
+            <div class="history-meta">${format} &middot; ${quality} &middot; ${size} MB &middot; Just now</div>
+          </div>
+          <div class="history-actions">
+            <button class="history-btn">Open</button>
+            <button class="history-btn">Edit</button>
+          </div>
+        `;
+        document.getElementById('history-list').prepend(item);
+      }
+    }, 100);
+  });
+
+  // Drop zone
+  const dropZone = document.getElementById('drop-zone');
+  const editPanel = document.getElementById('edit-panel');
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); showEditPanel(); });
+  dropZone.addEventListener('click', () => showEditPanel());
+
+  function showEditPanel() {
+    dropZone.style.display = 'none';
+    editPanel.classList.add('visible');
+    const files = ['vacation_clip.mp4', 'podcast_ep12.mp3', 'screen_recording.webm', 'concert_live.mkv'];
+    document.getElementById('edit-filename').textContent = files[Math.floor(Math.random() * files.length)];
+    generateWaveform();
+  }
+
+  // Waveform
+  function generateWaveform() {
+    const wf = document.getElementById('waveform');
+    wf.innerHTML = '';
+    for (let i = 0; i < 120; i++) {
+      const bar = document.createElement('div');
+      bar.className = 'wave-bar';
+      bar.style.height = (Math.random() * 40 + 10) + 'px';
+      wf.appendChild(bar);
+    }
+  }
+
+  // Slider
+  document.querySelectorAll('.slider-container').forEach(container => {
+    const track = container.querySelector('.slider-track');
+    const fill = container.querySelector('.slider-fill');
+    const thumb = container.querySelector('.slider-thumb');
+    const valueEl = container.querySelector('.slider-value');
+    let dragging = false;
+
+    function update(e) {
+      const rect = track.getBoundingClientRect();
+      let pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      fill.style.width = (pct * 100) + '%';
+      thumb.style.left = (pct * 100) + '%';
+      valueEl.textContent = Math.round(pct * 200) + '%';
+    }
+
+    track.addEventListener('mousedown', e => { dragging = true; update(e); });
+    thumb.addEventListener('mousedown', e => { dragging = true; e.stopPropagation(); });
+    document.addEventListener('mousemove', e => { if (dragging) update(e); });
+    document.addEventListener('mouseup', () => { dragging = false; });
+  });
+
+  // Edit buttons
+  document.getElementById('edit-cancel').addEventListener('click', () => {
+    editPanel.classList.remove('visible');
+    dropZone.style.display = '';
+  });
+
+  document.getElementById('edit-save').addEventListener('click', () => {
+    showToast('File exported successfully!');
+  });
+
+  // Toast
+  function showToast(text) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toast-text').textContent = text;
+    toast.classList.add('visible');
+    setTimeout(() => toast.classList.remove('visible'), 3000);
+  }
+</script>
+
+</body>
+</html>
