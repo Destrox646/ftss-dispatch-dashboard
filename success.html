@@ -66,15 +66,38 @@
   <div class="card">
     <div class="check">&#10003;</div>
     <h1>Payment Successful!</h1>
-    <p>Thank you for purchasing Privateer. Your license key will be sent to your email. Click below to download the app.</p>
-    <a href="https://privateer-app.web.app/privateer/Privateer.exe" class="btn-download">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Download Privateer
-    </a>
-    <div class="help">
-      <p>Already have the app? Open it and enter your license key to activate.</p>
+    <!-- Desktop view -->
+    <div id="desktop-view">
+      <p>Thank you for purchasing Privateer. Your license key will be sent to your email. Click below to download the app.</p>
+      <a href="https://privateer-app.web.app/privateer/Privateer.exe" class="btn-download">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Privateer
+      </a>
+      <div class="help">
+        <p>Already have the app? Open it and enter your license key to activate.</p>
+      </div>
+    </div>
+    <!-- Mobile view -->
+    <div id="mobile-view" style="display:none">
+      <p>Thank you for purchasing Privateer! Your license key will be sent to your email.</p>
+      <p style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px;font-size:14px;color:var(--muted);margin-bottom:24px">
+        Privateer is a <strong style="color:var(--text)">Windows desktop app</strong>. Open this page on your PC to download it.
+      </p>
+      <a href="https://privateer-app.web.app/privateer/Privateer.exe" class="btn-download" style="background:var(--blue)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        Save Download Link
+      </a>
+      <div class="help">
+        <p>Your license key has been emailed to you. Save this page or copy the link to download on your computer.</p>
+      </div>
     </div>
   </div>
+  <script>
+    if (/Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+      document.getElementById('desktop-view').style.display = 'none';
+      document.getElementById('mobile-view').style.display = 'block';
+    }
+  </script>
   <footer>
     <p>&copy; 2026 Privateer &middot; <a href="/">Back to Home</a></p>
   </footer>
