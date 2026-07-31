@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Destrox64 — Dispatcher, Privateer &amp; Exitium</title>
-  <meta name="description" content="Three tools built by Destrox64: Dispatcher for trucking logistics, Privateer for media downloading, and Exitium for video processing." />
+  <title>Destrox64 — Custom Software for Local Businesses</title>
+  <meta name="description" content="Custom web apps, dashboards, and automation tools built for local businesses. From dispatch systems to media pipelines — software that works for you." />
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
@@ -21,6 +21,8 @@
       --green-hover: #16a34a;
       --orange: #f97316;
       --orange-hover: #ea580c;
+      --purple: #a855f7;
+      --purple-hover: #9333ea;
     }
     html { scroll-behavior: smooth; }
     body {
@@ -53,9 +55,12 @@
     }
     .topnav-links a:hover { color: var(--text); background: var(--surface); }
     .topnav-links a.active { color: #fff; }
+    .topnav-links a[data-project="services"].active { background: var(--purple); }
+    .topnav-links a[data-project="work"].active { background: var(--blue); }
     .topnav-links a[data-project="dispatcher"].active { background: var(--blue); }
     .topnav-links a[data-project="privateer"].active { background: var(--green); }
     .topnav-links a[data-project="exitium"].active { background: var(--orange); }
+    .topnav-links a[data-project="contact"].active { background: var(--purple); }
 
     /* ── Project Section ── */
     .project {
@@ -206,6 +211,111 @@
     footer a { color: var(--muted); }
     footer a:hover { color: var(--text); }
 
+    /* ── Landing Hero ── */
+    .landing {
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 100px 24px 80px;
+      text-align: center; position: relative; overflow: hidden;
+    }
+    .landing::before {
+      content: ''; position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 800px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(168,85,247,.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .landing-badge {
+      display: inline-block; background: rgba(168,85,247,.12); border: 1px solid rgba(168,85,247,.3);
+      border-radius: 20px; padding: 6px 16px; font-size: 13px; color: var(--purple);
+      margin-bottom: 20px; font-weight: 600;
+    }
+    .landing h1 {
+      font-size: clamp(40px, 7vw, 64px); font-weight: 800; line-height: 1.1;
+      margin-bottom: 20px; max-width: 800px;
+    }
+    .landing h1 span { color: var(--purple); }
+    .landing p { font-size: 18px; color: var(--muted); max-width: 560px; margin: 0 auto 36px; }
+    .landing-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-purple { background: var(--purple); color: #fff; }
+    .btn-purple:hover { background: var(--purple-hover); }
+
+    /* ── Services ── */
+    .services {
+      padding: 100px 24px; display: flex; flex-direction: column; align-items: center;
+    }
+    .services-header { text-align: center; max-width: 600px; margin-bottom: 48px; }
+    .services-header h2 {
+      font-size: clamp(28px, 4vw, 38px); font-weight: 800; margin-bottom: 12px;
+    }
+    .services-header h2 span { color: var(--purple); }
+    .services-header p { font-size: 16px; color: var(--muted); }
+    .service-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px; width: 100%; max-width: 1100px;
+    }
+    .service-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 28px; transition: all .2s; position: relative; overflow: hidden;
+    }
+    .service-card:hover { border-color: var(--purple); transform: translateY(-2px); }
+    .service-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--purple), transparent); opacity: 0; transition: opacity .2s;
+    }
+    .service-card:hover::before { opacity: 1; }
+    .service-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: rgba(168,85,247,.12); display: flex; align-items: center;
+      justify-content: center; font-size: 22px; margin-bottom: 16px;
+    }
+    .service-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .service-card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+    /* ── Case Study ── */
+    .case-study {
+      display: flex; align-items: center; gap: 40px; width: 100%; max-width: 1000px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+      padding: 32px; margin-bottom: 32px;
+    }
+    .case-study-text { flex: 1; }
+    .case-study-text .tag {
+      display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; padding: 4px 10px; border-radius: 6px; margin-bottom: 12px;
+    }
+    .case-study-text h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .case-study-text p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .case-study-metric {
+      text-align: center; min-width: 140px; padding: 20px;
+      background: var(--surface2); border-radius: 14px;
+    }
+    .case-study-metric .number { font-size: 32px; font-weight: 800; }
+    .case-study-metric .label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* ── Contact CTA ── */
+    .contact-cta {
+      padding: 100px 24px; text-align: center;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .contact-cta h2 {
+      font-size: clamp(28px, 4vw, 38px); font-weight: 800; margin-bottom: 12px;
+    }
+    .contact-cta h2 span { color: var(--purple); }
+    .contact-cta p { font-size: 16px; color: var(--muted); max-width: 480px; margin: 0 auto 32px; }
+    .contact-cta .contact-links { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+    .contact-card {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 16px 24px; transition: all .2s; color: var(--text); text-decoration: none;
+    }
+    .contact-card:hover { border-color: var(--purple); transform: translateY(-2px); text-decoration: none; color: var(--text); }
+    .contact-card .cc-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: rgba(168,85,247,.12); display: flex; align-items: center;
+      justify-content: center; font-size: 18px;
+    }
+    .contact-card .cc-text { text-align: left; }
+    .contact-card .cc-label { font-size: 12px; color: var(--muted); }
+    .contact-card .cc-value { font-size: 15px; font-weight: 600; }
+
     /* ── Responsive ── */
     @media (max-width: 640px) {
       .topnav-links a { padding: 7px 10px; font-size: 12px; }
@@ -215,6 +325,13 @@
       .mock-grid { grid-template-columns: 1fr; }
       .preview-body { padding: 16px; }
       .preview-body .two-col { grid-template-columns: 1fr !important; }
+      .landing { padding: 90px 16px 60px; }
+      .landing-buttons { flex-direction: column; align-items: center; }
+      .services { padding: 60px 16px; }
+      .case-study { flex-direction: column; text-align: center; }
+      .case-study-metric { min-width: 100%; }
+      .contact-cta { padding: 60px 16px; }
+      .contact-links { flex-direction: column; align-items: center; }
     }
   </style>
 </head>
@@ -225,12 +342,72 @@
     <div class="topnav-inner">
       <div class="topnav-brand">Destrox64</div>
       <div class="topnav-links">
+        <a href="#services" data-project="services">Services</a>
+        <a href="#work" data-project="work">Our Work</a>
         <a href="#dispatcher" data-project="dispatcher">Dispatcher</a>
         <a href="#privateer" data-project="privateer">Privateer</a>
         <a href="#exitium" data-project="exitium">Exitium</a>
+        <a href="#contact" data-project="contact">Contact</a>
       </div>
     </div>
   </div>
+
+  <!-- ═══════════ LANDING HERO ═══════════ -->
+  <section class="landing" id="home">
+    <div class="landing-badge">Custom Software &middot; Local Businesses</div>
+    <h1>Software That <span>Works For You</span></h1>
+    <p>Custom web apps, dashboards, and automation tools built for businesses that need solutions — not subscriptions.</p>
+    <div class="landing-buttons">
+      <a href="#services" class="btn btn-purple">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        See What We Build
+      </a>
+      <a href="#contact" class="btn btn-secondary">Get In Touch</a>
+    </div>
+  </section>
+
+  <!-- ═══════════ SERVICES ═══════════ -->
+  <section class="services" id="services">
+    <div class="services-header">
+      <h2>What We <span>Build</span></h2>
+      <p>Custom software solutions tailored to how your business actually works — not generic templates that almost fit.</p>
+    </div>
+    <div class="service-grid">
+      <div class="service-card">
+        <div class="service-icon">&#128202;</div>
+        <h3>Business Dashboards</h3>
+        <p>Real-time dashboards for tracking drivers, inventory, sales, or whatever matters to your business. See everything at a glance.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">&#128172;</div>
+        <h3>SMS &amp; Communication</h3>
+        <p>Two-way texting, automated reminders, and chat systems that keep your team and customers connected without extra apps.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">&#128197;</div>
+        <h3>Scheduling &amp; Dispatch</h3>
+        <p>Shift management, route planning, and dispatch tools built around your workflow — not the other way around.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">&#128200;</div>
+        <h3>Data &amp; Reporting</h3>
+        <p>Custom reports, charts, and data pipelines that turn your spreadsheets into actionable insights.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">&#127760;</div>
+        <h3>Websites &amp; Web Apps</h3>
+        <p>Modern, fast-loading websites and web applications. From simple landing pages to full-featured business tools.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">&#9889;</div>
+        <h3>Automation</h3>
+        <p>Connect your tools, automate repetitive tasks, and eliminate manual data entry. Save hours every week.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ OUR WORK (anchor for project sections) ═══════════ -->
+  <section id="work" style="padding-top:80px;margin-top:-80px"></section>
 
   <!-- ═══════════ DISPATCHER ═══════════ -->
   <section class="project project--dispatcher" id="dispatcher">
@@ -580,6 +757,35 @@
     <div class="divider"></div>
   </section>
 
+  <!-- ═══════════ CONTACT CTA ═══════════ -->
+  <section class="contact-cta" id="contact">
+    <h2>Let's <span>Talk</span></h2>
+    <p>Have a problem that needs a software solution? Let's chat about what's possible — no pressure, no contracts, just a conversation.</p>
+    <div class="contact-links">
+      <a href="mailto:ctwagner3@gmail.com" class="contact-card">
+        <div class="cc-icon">&#9993;</div>
+        <div class="cc-text">
+          <div class="cc-label">Email</div>
+          <div class="cc-value">ctwagner3@gmail.com</div>
+        </div>
+      </a>
+      <a href="https://github.com/Destrox646" class="contact-card" target="_blank" rel="noopener">
+        <div class="cc-icon">&#128187;</div>
+        <div class="cc-text">
+          <div class="cc-label">GitHub</div>
+          <div class="cc-value">Destrox646</div>
+        </div>
+      </a>
+      <a href="https://destrox64.com" class="contact-card">
+        <div class="cc-icon">&#127760;</div>
+        <div class="cc-text">
+          <div class="cc-label">Website</div>
+          <div class="cc-value">destrox64.com</div>
+        </div>
+      </a>
+    </div>
+  </section>
+
   <!-- Footer -->
   <footer>
     <p>&copy; 2026 Destrox64 &middot; <a href="https://github.com/Destrox646">GitHub</a> &middot; <a href="mailto:ctwagner3@gmail.com">Contact</a></p>
@@ -587,14 +793,16 @@
 
   <!-- Active nav highlight on scroll -->
   <script>
-    const sections = document.querySelectorAll('.project');
+    const sections = document.querySelectorAll('.project, .landing, .services, .contact-cta');
     const navLinks = document.querySelectorAll('.topnav-links a');
     const observer = new IntersectionObserver(entries => {
       entries.forEach(e => {
         if (e.isIntersecting) {
           navLinks.forEach(l => l.classList.remove('active'));
           const id = e.target.id;
-          const link = document.querySelector(`.topnav-links a[data-project="${id}"]`);
+          // Map project sections to "Our Work" nav link
+          const mapId = ['dispatcher','privateer','exitium'].includes(id) ? 'work' : id;
+          const link = document.querySelector(`.topnav-links a[data-project="${mapId}"]`);
           if (link) link.classList.add('active');
         }
       });
